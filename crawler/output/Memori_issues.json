@@ -1,0 +1,87 @@
+[
+    {
+        "id": 3758936574,
+        "state": "open",
+        "title": "[Bug] google-genai wrapper fails to detect streaming response",
+        "url": "https://github.com/MemoriLabs/Memori/issues/246",
+        "labels": [
+            "bug"
+        ],
+        "body_summary": "### First Check\n\n- [x] I added a very descriptive title to this issue.\n- [x] I searched existing issues and documentation.\n\n### Memori Version\n\n3.1.2\n\n### OS / Python Version\n\nlinux/3.13\n\n### LLM Prov..."
+    },
+    {
+        "id": 3726224320,
+        "state": "open",
+        "title": "[Bug] RuntimeError: Unsupported LLM client type: langchain_openai.chat_models.base.ChatOpenAI",
+        "url": "https://github.com/MemoriLabs/Memori/issues/234",
+        "labels": [
+            "bug"
+        ],
+        "body_summary": "### First Check\n\n- [x] I added a very descriptive title to this issue.\n- [x] I searched existing issues and documentation.\n\n### Memori Version\n\n3.1.1\n\n### OS / Python Version\n\n3.10\n\n### LLM Provider\n\n..."
+    },
+    {
+        "id": 3736308723,
+        "state": "open",
+        "title": "[Bug] Auto Data Capture",
+        "url": "https://github.com/MemoriLabs/Memori/issues/238",
+        "labels": [
+            "bug"
+        ],
+        "body_summary": "### First Check\n\n- [x] I added a very descriptive title to this issue.\n- [x] I searched existing issues and documentation.\n\n### Memori Version\n\n3.1.1\n\n### OS / Python Version\n\nDocker (Ubuntu) / Python..."
+    },
+    {
+        "id": 3725116771,
+        "state": "open",
+        "title": "[Bug] Multi-turn conversation ingestion only records first turn for AzureOpenAI",
+        "url": "https://github.com/MemoriLabs/Memori/issues/233",
+        "labels": [
+            "bug"
+        ],
+        "body_summary": "### First Check\n\n- [x] I added a very descriptive title to this issue.\n- [x] I searched existing issues and documentation.\n\n### Memori Version\n\n3.1.0\n\n### OS / Python Version\n\nmacOS / Python 3.12\n\n###..."
+    },
+    {
+        "id": 3702147510,
+        "state": "open",
+        "title": "[Bug] Error: cannot pickle '_thread.RLock' object when using OpenAIChat with Memori + Agno (Streaming Mode)",
+        "url": "https://github.com/MemoriLabs/Memori/issues/214",
+        "labels": [
+            "bug"
+        ],
+        "body_summary": "### First Check\n\n- [x] I added a very descriptive title to this issue.\n- [x] I searched existing issues and documentation.\n\n### Memori Version\n\n3.0.6\n\n### OS / Python Version\n\nmacOS\n\n### LLM Provider\n..."
+    },
+    {
+        "id": 3519516486,
+        "state": "open",
+        "title": "\ud83d\udc1b Bug: Missing Exception Logging in Database Schema Initialization (Hacktoberfest)",
+        "url": "https://github.com/MemoriLabs/Memori/issues/111",
+        "labels": [
+            "bug",
+            "help wanted",
+            "hacktoberfest"
+        ],
+        "body_summary": "### \ud83e\udde9 Problem\nIn `memori/core/database.py`, if schema initialization fails, the fallback does not always log the full exception details (traceback, error message).\n\n### \ud83d\udccb Steps to Fix\n- Update the err..."
+    },
+    {
+        "id": 3519511563,
+        "state": "open",
+        "title": "\ud83d\udc1b Fix: Retry Decorator Edge Case Raises No Exception (Hacktoberfest)",
+        "url": "https://github.com/MemoriLabs/Memori/issues/110",
+        "labels": [
+            "bug",
+            "help wanted",
+            "hacktoberfest"
+        ],
+        "body_summary": "### \ud83e\udde9 Problem\nIn `memori/utils/helpers.py`, the retry decorator can raise a generic `MemoriError(\"Retry attempts exhausted\")` even if there was a last exception. This could mask the real error.\n\n### \ud83d\udccb..."
+    },
+    {
+        "id": 3553143356,
+        "state": "open",
+        "title": "Multi-user isolation doesn't exist? Library factually broken and eats TPM quota.",
+        "url": "https://github.com/MemoriLabs/Memori/issues/136",
+        "labels": [
+            "bug",
+            "hacktoberfest"
+        ],
+        "body_summary": "Hi Memori team,\n\nI made an earlier issue #68 which asked about per-user memories where you reassured me that per-user memories do exist and this is further supported by your multi-user scenario exampl..."
+    }
+]
