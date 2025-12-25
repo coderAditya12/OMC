@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+    db:
+      container_name:postgres
+      image:postgres:15-alpine
+      PORTS:
+        - "5432:5432"
+        POSTGRES_USER:postgres
+        POSTGRES_PASSWORD:root
+        POSTGRES_DB:osm_db
+
+        
+        
