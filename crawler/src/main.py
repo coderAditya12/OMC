@@ -1,8 +1,10 @@
 import json
 import os
 from github_client import GithubClient
+
 OUTPUT_DIR = "./output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 
 def run_crawler():
     client = GithubClient()
@@ -26,11 +28,10 @@ def run_crawler():
             "body_summary": issue["body"][:200] + "..."
             if issue["body"]
             else "No description",
-
         }
         cleaned_issues.append(cleaned_issue)
-    print(cleaned_issues)    
-    
+    print(cleaned_issues)
+
     output_file = f"{OUTPUT_DIR}/{target_repo}_issues.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(cleaned_issues, f, indent=4)
@@ -41,4 +42,3 @@ def run_crawler():
 
 if __name__ == "__main__":
     run_crawler()
-    
