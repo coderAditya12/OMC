@@ -1,12 +1,11 @@
-import json
-import os
 from github_client import GithubClient
+from models import init_db, get_session, Issue
 
-OUTPUT_DIR = "./output"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+session = get_session()
 
 
 def run_crawler():
+    init_db()
     client = GithubClient()
     target_owner = "MemoriLabs"
     target_repo = "Memori"
@@ -14,30 +13,21 @@ def run_crawler():
     if not raw_issues:
         print("no issues found or access denied.")
         return
-    # clean the data
-    cleaned_issues = []
-    for issue in raw_issues:
-        if "pull_request" in issue:
+    for issue_data in raw_issues:
+        if "pull_request" in issue_data:
             continue
-        cleaned_issue = {
-            "id": issue["id"],
-            "state": issue["state"],
-            "title": issue["title"],
-            "url": issue["html_url"],
-            "labels": [label["name"] for label in issue["labels"]],
-            "body_summary": issue["body"][:200] + "..."
-            if issue["body"]
-            else "No description",
-        }
-        cleaned_issues.append(cleaned_issue)
-    print(cleaned_issues)
+        issue = Issue(
+            github_issue_id=issue_data["id"],
+            title=issue_data["title"],
+            url=issue_data["html_url"],
+            state=issue_data["state"],
+            body=issue_data.get("body"),
+            repo_name="MemoriLabs/Memori",
+        )
+        session.add(issue)
 
-    output_file = f"{OUTPUT_DIR}/{target_repo}_issues.json"
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(cleaned_issues, f, indent=4)
-
-    print(f"✅ Success! Scraped {len(cleaned_issues)} issues.")
-    print(f"📁 Data saved to: {output_file}")
+    session.commit()
+    session.close()
 
 
 if __name__ == "__main__":
