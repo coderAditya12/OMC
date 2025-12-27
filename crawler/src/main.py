@@ -1,7 +1,16 @@
 from github_client import GithubClient
 from models import init_db, get_session, Issue
+from sqlalchemy import select
+
 
 session = get_session()
+
+
+def already_exist(issue_id):
+    result = session.execute(
+        select(Issue).where(Issue.github_issue_id == issue_id)
+    ).first()
+    return result is not None
 
 
 def run_crawler():
@@ -14,8 +23,9 @@ def run_crawler():
         print("no issues found or access denied.")
         return
     for issue_data in raw_issues:
-        if "pull_request" in issue_data:
+        if "pull_request" in issue_data or already_exist(issue_data["id"]):
             continue
+
         issue = Issue(
             github_issue_id=issue_data["id"],
             title=issue_data["title"],
