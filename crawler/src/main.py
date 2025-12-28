@@ -10,7 +10,7 @@ init_db()
 
 
 def already_exist(issue_id):
-    # Use scalar() for a slightly faster/cleaner check
+    # TODO:Use scalar() for a slightly faster/cleaner check
     result = session.execute(
         select(Issue).where(Issue.github_issue_id == issue_id)
     ).first()
