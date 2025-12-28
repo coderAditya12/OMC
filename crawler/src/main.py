@@ -1,12 +1,16 @@
 from github_client import GithubClient
 from models import init_db, get_session, Issue
 from sqlalchemy import select
-
+from vector_store import vectorDB
 
 session = get_session()
+vector_db = vectorDB()
+client = GithubClient()
+init_db()
 
 
 def already_exist(issue_id):
+    # Use scalar() for a slightly faster/cleaner check
     result = session.execute(
         select(Issue).where(Issue.github_issue_id == issue_id)
     ).first()
@@ -14,14 +18,13 @@ def already_exist(issue_id):
 
 
 def run_crawler():
-    init_db()
-    client = GithubClient()
     target_owner = "MemoriLabs"
     target_repo = "Memori"
     raw_issues = client.fetch_github_issues(target_owner, target_repo)
     if not raw_issues:
         print("no issues found or access denied.")
         return
+    new_issues_buffer = list()
     for issue_data in raw_issues:
         if "pull_request" in issue_data or already_exist(issue_data["id"]):
             continue
@@ -35,8 +38,10 @@ def run_crawler():
             repo_name="MemoriLabs/Memori",
         )
         session.add(issue)
-
-    session.commit()
+        new_issues_buffer.append(issue)
+    if new_issues_buffer:
+        session.commit()
+        vector_db.upsert_issues(new_issues_buffer)
     session.close()
 
 

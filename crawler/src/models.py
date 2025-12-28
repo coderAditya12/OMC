@@ -1,11 +1,11 @@
 from datetime import datetime
 from sqlalchemy import create_engine, text, BigInteger, DateTime, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
-import os
+from config import DB_URL
 from dotenv import load_dotenv
 
 load_dotenv()
-DB_URL = os.getenv("DATABASE_URL")
+
 engine = create_engine(DB_URL)
 
 try:

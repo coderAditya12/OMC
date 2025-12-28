@@ -29,7 +29,7 @@ class GithubClient:
             "direction": "desc",
             "per_page": 10,
         }
-        print(f"📡 Connecting to GitHub: {owner}/{repo} looking for '{label}'...")
+        print(f" Connecting to GitHub: {owner}/{repo} looking for '{label}'...")
         try:
             with httpx.Client() as client:
                 response = client.get(url, headers=self.headers, params=params)

@@ -15,18 +15,20 @@ class vectorDB:
             model="models/text-embedding-004"
         )
         self.index = self.pc.Index(index)
-        self.vector_store = PineconeVectorStore(embedding=self.embeddings, index=index)
+        self.vector_store = PineconeVectorStore(
+            embedding=self.embeddings, index=self.index
+        )
 
     def upsert_issues(self, issues):
         """
         Takes a list of Issue dictionaries (or objects), creates embeddings,
         and uploads to Pinecone.
         """
-        print(f"🧠 Generating embeddings for {len(issues)} issues...")
+        print(f" Generating embeddings for {len(issues)} issues...")
         vector_to_upload = []
         for issue in issues:
             text_to_embed = f"Title:{issue.title}\nBody:{issue.body or ''}"
-            generate_embeddings = self.embeddings.aembed_query(text_to_embed)
+            generate_embeddings = self.embeddings.embed_query(text_to_embed)
             vector_to_upload.append(
                 {
                     "id": str(issue.github_issue_id),
