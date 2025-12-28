@@ -1,5 +1,4 @@
-from vector_store import vectorDB
-
+from core.vector_store import vectorDB
 
 def test_search():
     vdb = vectorDB()

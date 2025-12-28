@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import create_engine, text, BigInteger, DateTime, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
-from config import DB_URL
+from core.config import DB_URL
 from dotenv import load_dotenv
 
 load_dotenv()

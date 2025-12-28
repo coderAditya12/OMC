@@ -1,13 +1,12 @@
 import httpx
-import os
 from dotenv import load_dotenv
-
+from core.config import GITHUB_ACCESS_TOKEN
 load_dotenv()
 
 
 class GithubClient:
     def __init__(self):
-        self.token = os.getenv("GITHUB_ACCESS_TOKEN")
+        self.token = GITHUB_ACCESS_TOKEN
         if not self.token:
             raise ValueError("GITHUB_ACCESS_TOKEN not found in dotenv file")
         self.base_url = "https://api.github.com/"

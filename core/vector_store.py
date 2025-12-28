@@ -1,7 +1,7 @@
 from pinecone import Pinecone
 from dotenv import load_dotenv
 from langchain_pinecone import PineconeVectorStore
-from config import pinecone_key, index
+from core.config import pinecone_key, index
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 load_dotenv()

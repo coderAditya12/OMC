@@ -1,8 +1,7 @@
-from github_client import GithubClient
-from models import init_db, get_session, Issue
+from core.github_client import GithubClient
+from core.models import init_db, get_session, Issue
 from sqlalchemy import select
-from vector_store import vectorDB
-
+from core.vector_store import vectorDB
 session = get_session()
 vector_db = vectorDB()
 client = GithubClient()
