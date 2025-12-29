@@ -62,6 +62,8 @@ class vectorDB:
             top_k=limit,
             include_metadata=True,  # Critical: We need the URL/Title back!
         )
+
+        # TODO:i will implement the rerank stratergy
         matches = []
         for match in results.get("matches", []):
             matches.append(
