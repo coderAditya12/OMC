@@ -44,7 +44,7 @@ class vectorDB:
             self.index.upsert(vectors=vector_to_upload)
             print(f"Successfully uploaded {len(vector_to_upload)} vectors to pinecone")
 
-    def querySearch(self, query: str, top_k: int = 5):
+    def querySearch(self, query: str, limit: int = 5):
         """
         Search for similar issues in Pinecone.
 
@@ -57,13 +57,9 @@ class vectorDB:
         """
         query_embedding = self.embeddings.embed_query(query)
 
-        # results = self.index.search(
-        #     query={"top_k": top_k, input: {"text": query_embedding}},
-        #     namespace=""
-        # )
         results = self.index.query(
             vector=query_embedding,
-            top_k=top_k,
+            top_k=limit,
             include_metadata=True,  # Critical: We need the URL/Title back!
         )
         matches = []
