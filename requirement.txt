@@ -5,3 +5,9 @@ SQLAlchemy
 langchain
 langchain-google-genai
 pinecone
+fastapi
+uvicorn
+sqlmodel
+psycopg2-binary
+pinecone-client
+python-dotenv

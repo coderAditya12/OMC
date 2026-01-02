@@ -5,7 +5,6 @@ from core.config import pinecone_key, index
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 load_dotenv()
-# embedding model
 
 
 class vectorDB:
@@ -37,7 +36,7 @@ class vectorDB:
                         "url": issue.url,
                         "title": issue.title,
                         "repo": issue.repo_name,
-                    },
+                    }
                 }
             )
         if vector_to_upload:
@@ -55,6 +54,7 @@ class vectorDB:
         Returns:
             A list of matches, each containing 'id', 'score', and 'metadata'
         """
+        print("query search is called")
         query_embedding = self.embeddings.embed_query(query)
 
         results = self.index.query(

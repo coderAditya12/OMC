@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+print(DB_URL)
 engine = create_engine(DB_URL)
 
 try:

@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-sqlmodel
-psycopg2-binary
-pinecone-client
-langchain-google-genai
-python-dotenv
