@@ -13,26 +13,25 @@ class Agent:
         """
         Generates a step-by-step plan to fix the issue.
         """
-        SYSTEM_PROMPT="""
-        You are a Senior Open Source Maintainer.
-        A new contributor wants to fix this issue:
-        
-        ISSUE TITLE: {title}
-        ISSUE DESCRIPTION:
-        {body}
-        
-        Task:
-        1. Analyze the issue.
-        2. Create a high-level step-by-step plan to fix it.
-        3. Suggest which files usually contain this kind of logic (e.g., if it's a frontend bug, suggest checking components/).
-        4. Keep it encouraging but technical.
-        
-        Output Markdown.
-        """
-        prompt = ChatPromptTemplate(SYSTEM_PROMPT)
+        prompt = ChatPromptTemplate.from_messages([
+            ("human", """You are a Senior Open Source Maintainer.
+A new contributor wants to fix this issue:
+
+ISSUE TITLE: {title}
+ISSUE DESCRIPTION:
+{body}
+
+Task:
+1. Analyze the issue.
+2. Create a high-level step-by-step plan to fix it.
+3. Suggest which files usually contain this kind of logic (e.g., if it's a frontend bug, suggest checking components/).
+4. Keep it encouraging but technical.
+
+Output Markdown.""")
+        ])
         chain = prompt | self.llm_agent
         response = chain.invoke({
-            title:issue_title,
-            body:issue_body
+            "title": issue_title,
+            "body": issue_body
         })
         return response.content
