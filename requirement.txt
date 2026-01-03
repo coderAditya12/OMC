@@ -9,5 +9,4 @@ fastapi
 uvicorn
 sqlmodel
 psycopg2-binary
-pinecone-client
 python-dotenv
