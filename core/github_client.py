@@ -7,8 +7,6 @@ load_dotenv()
 class GithubClient:
     def __init__(self):
         self.token = GITHUB_ACCESS_TOKEN
-        if not self.token:
-            raise ValueError("GITHUB_ACCESS_TOKEN not found in dotenv file")
         self.base_url = "https://api.github.com/"
         self.headers = {
             "Authorization": f"token {self.token}",
@@ -39,3 +37,20 @@ class GithubClient:
         except Exception as e:
             print(f"connection error: {e}")
             return []
+    def fetch_code(self,wner:str,repo:string,file_path:str):
+        fetch_code_api=f"{self.base_url}/repos/{owner}/{repo}/contents/{path}"
+        
+        try:
+            with httpx.Client as client:
+                headers = self.headers.copy()
+                headers["accept"]="application/vnd.github.raw+json"
+                response = client.get(fetch_code_api,headers=headers)
+                
+                response.raise_for_status()
+                return response.txt
+            pass
+        except Exception as e:
+            print(f"error while fetching the file content: {e}")
+            return None
+        
+        
