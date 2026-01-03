@@ -15,8 +15,6 @@ app.add_middleware(
     allow_credentials=False,
     allow_headers=["*"],
 )
-
-
 class IssueResponse(BaseModel):
     id: int
     title: str
