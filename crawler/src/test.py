@@ -1,16 +1,29 @@
-from core.vector_store import vectorDB
+"""
+Test module for vector store search functionality.
 
-def test_search():
-    vdb = vectorDB()
+This module provides an interactive test for the semantic search feature.
+"""
 
-    # Simulating a user query
+from core.vector_store import query_search
+
+
+def test_search() -> None:
+    """
+    Interactive test for semantic search.
+    
+    Prompts the user for a query and displays matching issues from the vector store.
+    """
     user_query = input(
         "Describe your skills (e.g., 'I know React and want to fix bugs'): "
     )
 
     print("\n... Consulting the AI Matchmaker ...\n")
 
-    matches = vdb.querySearch(user_query)
+    matches = query_search(user_query)
+
+    if not matches:
+        print("No matches found.")
+        return
 
     for match in matches:
         score = match["score"]

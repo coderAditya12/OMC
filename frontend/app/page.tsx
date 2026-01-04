@@ -59,7 +59,8 @@ export default function Home() {
       const res = await axios.post("http://localhost:8000/generate-plan", 
         {
           title: issue.title,
-          body: "Description not fetched yet in this demo" // In real app, fetch full body first
+          body: "Description not fetched yet in this demo",
+          repo_name: issue.repo_name
         }
     );
       

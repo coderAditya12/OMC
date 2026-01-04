@@ -1,10 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from core.vector_store import vectorDB
 from pydantic import BaseModel
-from core.agent import Agent
 
-aiAgent = Agent()
+from core.agent import create_agent, generate_plan
+from core.vector_store import query_search
+
+# Initialize the agent graph once at startup
+agent_app = create_agent()
 
 
 app = FastAPI()
@@ -25,8 +27,9 @@ class IssueResponse(BaseModel):
 class PlanRequest(BaseModel):
     title: str
     body: str
+    repo_name:str
     
-vector_db = vectorDB()
+
 
 
 @app.get("/")
@@ -44,7 +47,7 @@ def search_issue(q: str, limit: int = 5):
     if not q:
         raise HTTPException(status_code=400, detail="Please pass the Query")
     try:
-        result = vector_db.querySearch(q, limit=limit)
+        result = query_search(q, limit=limit)
         response = []
         for match in result:
             response.append(
@@ -63,10 +66,10 @@ def search_issue(q: str, limit: int = 5):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.post("/generate-plan")
-def generate_plan(request: PlanRequest):
+def generate_plan_endpoint(request: PlanRequest):
     print(f"🤖 Generating plan for: {request.title}")
     try:
-        plan = aiAgent.generate_contribution_plan(request.title, request.body)
+        plan = generate_plan(agent_app, request.title, request.body, request.repo_name)
         return {"plan": plan}
     except Exception as e:
         print(f"Error: {e}")
