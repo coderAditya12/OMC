@@ -7,6 +7,7 @@ DB_URL = os.getenv("DATABASE_URL")
 print(DB_URL)
 GITHUB_ACCESS_TOKEN = os.getenv("GITHUB_ACCESS_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+jwt_secret = os.getenv("JWT_SECRET_KEY")
 
 
 

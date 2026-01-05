@@ -1,248 +1,139 @@
-"use client";
+import Link from "next/link";
 
-import { useState } from "react";
-import { Search, Github, ArrowRight, Loader2, Sparkles, X, BookOpen } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import axios from "axios";
-
-// --- Types ---
-interface Issue {
-  id: number;
-  title: string;
-  url: string;
-  repo_name: string;
-  score: number;
-  body?: string; // We might need this later
-}
-
-interface PlanResponse {
-  plan: string;
-}
-
-export default function Home() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Issue[]>([]);
-  const [loadingSearch, setLoadingSearch] = useState(false);
-  
-  // State for the AI Plan Modal
-  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
-  const [plan, setPlan] = useState<string>("");
-  const [loadingPlan, setLoadingPlan] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // --- Handlers ---
-
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-    setLoadingSearch(true);
-    setResults([]); 
-    
-    try {
-      const res = await axios.get(`http://localhost:8000/search?q=${query}&limit=5`);
-      const data =res.data
-      setResults(data);
-    } catch (error) {
-      console.error("Failed to fetch issues:", error);
-    } finally {
-      setLoadingSearch(false);
-    }
-  };
-
-  const handleGeneratePlan = async (issue: Issue) => {
-    setSelectedIssue(issue);
-    setIsModalOpen(true);
-    setLoadingPlan(true);
-    setPlan(""); // Reset previous plan
-
-    try {
-      const res = await axios.post("http://localhost:8000/generate-plan", 
-        {
-          title: issue.title,
-          body: "Description not fetched yet in this demo",
-          repo_name: issue.repo_name
-        }
-    );
-      
-      const data: PlanResponse = res.data
-      console.log("Received plan:", data.plan);
-      setPlan(data.plan);
-    } catch (error) {
-      setPlan("❌ Error: Failed to generate plan. Please try again.");
-    } finally {
-      setLoadingPlan(false);
-    }
-  };
-
-  // --- UI Components ---
-
+export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center pt-24 px-4 pb-20">
-      
-      {/* 1. Hero Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-12"
-      >
-        <div className="flex justify-center mb-4">
-          <div className="bg-blue-600/10 p-3 rounded-full border border-blue-500/20 shadow-[0_0_15px_rgba(37,99,235,0.3)]">
-            <Github className="w-8 h-8 text-blue-500" />
-          </div>
-        </div>
-        <h1 className="text-5xl font-bold tracking-tight mb-4">
-          OpenSource <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">Matchmaker</span>
-        </h1>
-        <p className="text-gray-400 text-lg max-w-xl mx-auto">
-          Don't just search for keywords. Describe the bug you want to fix, and our AI will find the perfect issue & guide you.
-        </p>
-      </motion.div>
-
-      {/* 2. Search Bar */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="w-full max-w-2xl relative z-10"
-      >
-        <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg blur opacity-30 group-hover:opacity-75 transition duration-200"></div>
-          <div className="relative flex items-center bg-[#111] rounded-lg border border-gray-800 p-2">
-            <Search className="w-5 h-5 text-gray-400 ml-3" />
-            <input 
-              type="text" 
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="e.g. 'I know React and want to fix UI bugs'..." 
-              className="w-full bg-transparent border-none focus:ring-0 text-white placeholder-gray-500 p-3 text-lg outline-none"
-            />
-            <button 
-              onClick={handleSearch}
-              disabled={loadingSearch}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-md font-medium transition-all disabled:opacity-50 flex items-center gap-2"
-            >
-              {loadingSearch ? <Loader2 className="w-5 h-5 animate-spin" /> : "Match"}
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* 3. Results List */}
-      <div className="w-full max-w-2xl mt-12 space-y-4">
-        {results.map((issue, index) => (
-          <motion.div
-            key={issue.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="group relative bg-[#111] border border-gray-800 hover:border-blue-500/50 p-6 rounded-xl transition-all hover:bg-[#161616]"
-          >
-            <div className="flex justify-between items-start">
-              <div className="flex-1 pr-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-mono text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-900/30">
-                    {issue.repo_name}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    Match: {(issue.score * 100).toFixed(0)}%
-                  </span>
-                </div>
-                <h3 className="text-xl font-semibold group-hover:text-blue-400 transition-colors mb-2">
-                  {issue.title}
-                </h3>
-                
-                <div className="flex gap-3 mt-4">
-                  {/* Primary Action: Go to GitHub */}
-                  <a 
-                    href={issue.url} 
-                    target="_blank" 
-                    className="text-sm flex items-center gap-1 text-gray-400 hover:text-white transition-colors border border-gray-700 hover:border-gray-500 px-3 py-1.5 rounded-md"
-                  >
-                    <Github className="w-4 h-4" /> View Issue
-                  </a>
-
-                  {/* Secondary Action: AI Agent */}
-                  <button
-                    onClick={() => handleGeneratePlan(issue)}
-                    className="text-sm flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors border border-blue-900/50 hover:border-blue-500/50 bg-blue-900/10 px-3 py-1.5 rounded-md"
-                  >
-                    <Sparkles className="w-4 h-4" /> Generate Plan
-                  </button>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-black/20 border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+              <span className="text-white font-bold text-xl">O</span>
             </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* 4. AI Plan Modal (The "Copilot" UI) */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111] border border-gray-800 w-full max-w-3xl max-h-[80vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            <span className="text-white font-semibold text-xl tracking-tight">OMC</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/login"
+              className="px-5 py-2.5 text-sm font-medium text-white/90 hover:text-white transition-colors"
             >
-              {/* Modal Header */}
-              <div className="p-6 border-b border-gray-800 flex justify-between items-start bg-[#161616]">
-                <div>
-                  <h2 className="text-xl font-bold flex items-center gap-2 text-blue-400">
-                    <Sparkles className="w-5 h-5" /> AI Contributor Plan
-                  </h2>
-                  <p className="text-gray-400 text-sm mt-1 line-clamp-1">
-                    Strategy for: {selectedIssue?.title}
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-2 hover:bg-gray-800 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
+              Sign In
+            </Link>
+            <Link
+              href="/login"
+              className="px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-full hover:from-violet-500 hover:to-purple-500 transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50"
+            >
+              Get Started
+            </Link>
+          </div>
+        </div>
+      </nav>
 
-              {/* Modal Body */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-                {loadingPlan ? (
-                  <div className="flex flex-col items-center justify-center h-48 space-y-4">
-                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                    <p className="text-gray-400 animate-pulse">Reading issue context...</p>
-                  </div>
-                ) : (
-                  <div className="prose prose-invert prose-blue max-w-none">
-                    <ReactMarkdown>{plan}</ReactMarkdown>
-                  </div>
-                )}
-              </div>
+      {/* Hero Section */}
+      <main className="relative pt-32 pb-20 px-6">
+        {/* Background Effects */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/30 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-violet-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-3xl"></div>
+        </div>
 
-              {/* Modal Footer */}
-              <div className="p-4 border-t border-gray-800 bg-[#161616] flex justify-end gap-3">
-                <button 
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-                >
-                  Close
-                </button>
-                <a 
-                  href={selectedIssue?.url} 
-                  target="_blank"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-medium flex items-center gap-2"
-                >
-                   Start Coding <ArrowRight className="w-4 h-4" />
-                </a>
+        <div className="max-w-5xl mx-auto text-center relative z-10">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm mb-8">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+            <span className="text-sm text-white/80">Powered by Advanced AI</span>
+          </div>
+
+          {/* Main Heading */}
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+            Your Intelligent
+            <span className="block bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              AI Assistant
+            </span>
+          </h1>
+
+          {/* Subheading */}
+          <p className="text-xl text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed">
+            Experience the future of productivity with OMC. Our AI-powered platform
+            helps you accomplish more, faster than ever before.
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link
+              href="/login"
+              className="group relative px-8 py-4 text-lg font-semibold bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-full overflow-hidden transition-all hover:scale-105 shadow-2xl shadow-purple-500/30"
+            >
+              <span className="relative z-10">Start Free Today</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </Link>
+            <Link
+              href="#features"
+              className="px-8 py-4 text-lg font-medium text-white/90 border border-white/20 rounded-full hover:bg-white/10 transition-all backdrop-blur-sm"
+            >
+              Learn More
+            </Link>
+          </div>
+        </div>
+
+        {/* Features Section */}
+        <section id="features" className="max-w-6xl mx-auto mt-32 relative z-10">
+          <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-16">
+            Why Choose <span className="text-purple-400">OMC</span>?
+          </h2>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className="group p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all hover:border-purple-500/50">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </main>
+              <h3 className="text-xl font-semibold text-white mb-3">Lightning Fast</h3>
+              <p className="text-white/60 leading-relaxed">
+                Get instant responses and complete tasks in seconds with our optimized AI engine.
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="group p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all hover:border-purple-500/50">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Secure by Design</h3>
+              <p className="text-white/60 leading-relaxed">
+                Your data is protected with enterprise-grade security and encryption.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="group p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all hover:border-purple-500/50">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Smart Learning</h3>
+              <p className="text-white/60 leading-relaxed">
+                Our AI adapts to your needs and improves over time for personalized results.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 py-8 mt-20">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <p className="text-white/40 text-sm">
+            © 2026 OMC. All rights reserved.
+          </p>
+        </div>
+      </footer>
+    </div>
   );
 }

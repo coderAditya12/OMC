@@ -1,13 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from core.agent import create_agent, generate_plan
-from core.vector_store import query_search
-
-# Initialize the agent graph once at startup
-agent_app = create_agent()
-
+from core.config import jwt_secret
+import uvicorn
+import jwt
 
 app = FastAPI()
 app.add_middleware(
@@ -17,65 +13,47 @@ app.add_middleware(
     allow_credentials=False,
     allow_headers=["*"],
 )
-class IssueResponse(BaseModel):
-    id: int
-    title: str
-    url: str
-    repo_name: str
-    score: float
-
-class PlanRequest(BaseModel):
-    title: str
-    body: str
-    repo_name:str
-    
 
 
+class GitHubAuthData(BaseModel):
+    id: str
+    name: str | None = None
+    email: str | None = None
+    image: str | None = None
+    accessToken: str | None = None
 
+class LoginResponse(BaseModel):
+    id:str
+    name:str
+    email:str
 @app.get("/")
 def root():
     return "server is healthy"
 
-
-@app.get("/search", response_model=list[IssueResponse])
-def search_issue(q: str, limit: int = 5):
+@app.post("/auth/github")
+def receive_github_auth(data: GitHubAuthData,Response:Response):
     """
-    Semantic Search Endpoint.
-    User sends ?q="I want to fix React bugs"
-    We return JSON list of matches.
+    Receives GitHub authentication data from the frontend.
+    Prints all the data for debugging.
     """
-    if not q:
-        raise HTTPException(status_code=400, detail="Please pass the Query")
-    try:
-        result = query_search(q, limit=limit)
-        response = []
-        for match in result:
-            response.append(
-                IssueResponse(
-                    id=int(match["id"]),
-                    title=match["metadata"]["title"],
-                    url=match["metadata"]["url"],
-                    repo_name=match["metadata"]["repo"],
-                    score=match["score"],
-                )
-            )
-        return response
-
-    except Exception as e:
-        print("Got error in Search api: ", e)
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-@app.post("/generate-plan")
-def generate_plan_endpoint(request: PlanRequest):
-    print(f"🤖 Generating plan for: {request.title}")
-    try:
-        plan = generate_plan(agent_app, request.title, request.body, request.repo_name)
-        return {"plan": plan}
-    except Exception as e:
-        print(f"Error: {e}")
-        raise HTTPException(status_code=500, detail="AI generation failed")
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="localhost", port=8000)
+    print("=" * 50)
+    print("🔐 GitHub Auth Data Received:")
+    print(f"   ID: {data.id}")
+    print(f"   Name: {data.name}")
+    print(f"   Email: {data.email}")
+    print(f"   Image: {data.image}")
+    print(f"   Access Token: {data.accessToken[:20]}..." if data.accessToken else "   Access Token: None")
+    print("=" * 50)
+    #TODO:send user data into database
+    encoded_jwt = jwt.encode({"email":data.email,"AccessToken":data.accessToken},jwt_secret,algorithm="HS256")
+    print("encoded_jwt",encoded_jwt)
+    Response.set_cookie(key="user_token",value=encoded_jwt)
+    return
     
+    return {"status": "success","response":{
+        "id":data.id,
+        "email":data.email,
+        "name":data.name
+    }}
+if __name__ == "__main__":
+    uvicorn.run(app, host="localhost", port=8000)

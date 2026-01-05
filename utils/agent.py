@@ -188,11 +188,17 @@ Provide a detailed implementation plan in Markdown format.
         for block in content:
             if isinstance(block, str):
                 text_parts.append(block)
-            elif isinstance(block, dict) and "text" in block:
-                text_parts.append(block["text"])
-        return "\n".join(text_parts)
+            elif isinstance(block, dict):
+                # Handle {type: 'text', text: '...'} format
+                if "text" in block:
+                    text_parts.append(block["text"])
+        return "\n\n".join(text_parts)
     
-    # Ensure we return a string
+    # If it's already a string, return as-is
+    if isinstance(content, str):
+        return content
+    
+    # Fallback: convert to string
     return str(content) if content else "No plan generated."
 
 
