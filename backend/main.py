@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException,Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from core.config import jwt_secret
+from sqlalchemy import select
+from utils.config import jwt_secret
+from db.models.usermodel import create_sesseion,User
 import uvicorn
 import jwt
 
@@ -21,17 +23,23 @@ class GitHubAuthData(BaseModel):
     email: str | None = None
     image: str | None = None
     accessToken: str | None = None
+session = create_sesseion()
 
 class LoginResponse(BaseModel):
     id:str
     name:str
     email:str
+def encoded_func(data: GitHubAuthData):
+    encoded_jwt = jwt.encode({"email": data.email, "AccessToken": data.accessToken}, jwt_secret, algorithm="HS256")
+    return encoded_jwt
+    
+    
 @app.get("/")
 def root():
     return "server is healthy"
 
 @app.post("/auth/github")
-def receive_github_auth(data: GitHubAuthData,Response:Response):
+def receive_github_auth(data: GitHubAuthData, response: Response):
     """
     Receives GitHub authentication data from the frontend.
     Prints all the data for debugging.
@@ -44,16 +52,28 @@ def receive_github_auth(data: GitHubAuthData,Response:Response):
     print(f"   Image: {data.image}")
     print(f"   Access Token: {data.accessToken[:20]}..." if data.accessToken else "   Access Token: None")
     print("=" * 50)
-    #TODO:send user data into database
-    encoded_jwt = jwt.encode({"email":data.email,"AccessToken":data.accessToken},jwt_secret,algorithm="HS256")
-    print("encoded_jwt",encoded_jwt)
-    Response.set_cookie(key="user_token",value=encoded_jwt)
-    return
-    
-    return {"status": "success","response":{
-        "id":data.id,
-        "email":data.email,
-        "name":data.name
+    # Check if user exists in database
+    result = session.execute(select(User).where(User.email == data.email))
+    exist_user = result.scalars().first()
+    if exist_user:
+        response.set_cookie(key="user_token", value=encoded_func(data))
+        return {"status": "success", "response": {
+            "id": data.id,
+            "email": data.email,
+            "name": data.name
+        }}
+    create_user= User(
+        id=data.id,
+        email=data.email,
+        name=data.name,
+    )
+    session.add(create_user)
+    session.commit()
+    response.set_cookie(key="user_token", value=encoded_func(data))
+    return {"status": "success", "response": {
+        "id": data.id,
+        "email": data.email,
+        "name": data.name
     }}
 if __name__ == "__main__":
     uvicorn.run(app, host="localhost", port=8000)

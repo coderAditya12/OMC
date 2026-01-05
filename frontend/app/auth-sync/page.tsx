@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import axios from "axios";
 
 export default function AuthSyncPage() {
     const { data: session, status } = useSession();
@@ -16,21 +17,18 @@ export default function AuthSyncPage() {
 
                 try {
                     // Send auth data to FastAPI backend
-                    const response = await fetch("http://localhost:8000/auth/github", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            id: session.user?.id || "",
-                            name: session.user?.name,
-                            email: session.user?.email,
-                            image: session.user?.image,
-                            accessToken: session.accessToken,
-                        }),
-                    });
+                    const response = await axios.post("http://localhost:8000/auth/github", {
 
-                    if (response.ok) {
+
+                        id: session.user?.id || "",
+                        name: session.user?.name,
+                        email: session.user?.email,
+                        image: session.user?.image,
+                        accessToken: session.accessToken,
+
+                    },{withCredentials:true});
+
+                    if (response.status === 200 || response.status === 201) {
                         console.log("Auth sync successful");
                     } else {
                         console.error("Auth sync failed");
