@@ -10,9 +10,9 @@ import jwt
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],  # Your Next.js frontend origin
     allow_methods=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_headers=["*"],
 )
 
@@ -50,11 +50,10 @@ def receive_github_auth(data: GitHubAuthData, response: Response):
     print(f"   Name: {data.name}")
     print(f"   Email: {data.email}")
     print(f"   Image: {data.image}")
-    print(f"   Access Token: {data.accessToken[:20]}..." if data.accessToken else "   Access Token: None")
+    print(f"   Access Token:{ data.accessToken}")
     print("=" * 50)
     # Check if user exists in database
-    result = session.execute(select(User).where(User.email == data.email))
-    exist_user = result.scalars().first()
+    exist_user = session.execute(select(User).where(User.email == data.email)).scalars().first()
     if exist_user:
         response.set_cookie(key="user_token", value=encoded_func(data))
         return {"status": "success", "response": {

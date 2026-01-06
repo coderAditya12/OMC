@@ -1,4 +1,3 @@
-from sqlalchemy.sql.schema import PrimaryKeyConstraint
 from sqlalchemy import create_engine,String
 from utils.config import DB_URL
 from sqlalchemy.orm import DeclarativeBase,Mapped,MappedColumn,Session
