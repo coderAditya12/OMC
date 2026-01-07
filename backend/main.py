@@ -1,143 +1,121 @@
-from fastapi import FastAPI, HTTPException,Response
+"""
+OpenSource Compass - Backend API
+Clean, modular FastAPI server
+"""
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy import select
-from utils.config import jwt_secret
-from db.models.usermodel import create_sesseion,User
-import uvicorn
-import jwt
 
-app = FastAPI()
+from backend.services import github, profile, matcher
+
+
+# Initialize FastAPI
+app = FastAPI(title="OpenSource Compass API")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Your Next.js frontend origin
+    allow_origins=["http://localhost:3000"],
     allow_methods=["*"],
     allow_credentials=True,
     allow_headers=["*"],
 )
 
 
-class GitHubAuthData(BaseModel):
+# Request/Response Models
+class AuthRequest(BaseModel):
     id: str
     name: str | None = None
     email: str | None = None
     image: str | None = None
     accessToken: str | None = None
-session = create_sesseion()
-
-class LoginResponse(BaseModel):
-    id:str
-    name:str
-    email:str
-def encoded_func(data: GitHubAuthData):
-    encoded_jwt = jwt.encode({"email": data.email, "AccessToken": data.accessToken}, jwt_secret, algorithm="HS256")
-    return encoded_jwt
-    
-    
-@app.get("/")
-def root():
-    return "server is healthy"
-
-@app.post("/auth/github")
-def receive_github_auth(data: GitHubAuthData, response: Response):
-    """
-    Receives GitHub authentication data from the frontend.
-    Prints all the data for debugging.
-    """
-    print("=" * 50)
-    print("🔐 GitHub Auth Data Received:")
-    print(f"   ID: {data.id}")
-    print(f"   Name: {data.name}")
-    print(f"   Email: {data.email}")
-    print(f"   Image: {data.image}")
-    print(f"   Access Token:{ data.accessToken}")
-    print("=" * 50)
-    # Check if user exists in database
-    exist_user = session.execute(select(User).where(User.email == data.email)).scalars().first()
-    if exist_user:
-        response.set_cookie(key="user_token", value=encoded_func(data))
-        return {"status": "success", "response": {
-            "id": data.id,
-            "email": data.email,
-            "name": data.name
-        }}
-    create_user= User(
-        id=data.id,
-        email=data.email,
-        name=data.name,
-    )
-    session.add(create_user)
-    session.commit()
-    response.set_cookie(key="user_token", value=encoded_func(data))
-    return {"status": "success", "response": {
-        "id": data.id,
-        "email": data.email,
-        "name": data.name
-    }}
 
 
 class RecommendRequest(BaseModel):
     access_token: str
 
 
+# Routes
+@app.get("/")
+def health():
+    return {"status": "healthy"}
+
+
+@app.post("/auth/github")
+def auth_github(data: AuthRequest, response: Response):
+    """Handle GitHub OAuth callback"""
+    # For now, just return success
+    # TODO: Add database storage when needed
+    return {
+        "status": "success",
+        "user": {
+            "id": data.id,
+            "name": data.name,
+            "email": data.email
+        }
+    }
+
+
 @app.post("/recommend")
 def get_recommendations(request: RecommendRequest):
     """
-    Get issue recommendations based on user's GitHub profile.
+    Get issue recommendations based on user's GitHub profile
     
-    1. Fetch user repos using access_token
-    2. Create user profile
-    3. Fetch matching issues
-    4. Return top 10 matches
+    1. Fetch user info & repos
+    2. Build user profile
+    3. Search for issues matching languages
+    4. Score and rank issues
+    5. Return top matches
     """
-    from backend.test import filter_repo_data, create_user_profile, get_user_info
-    from backend.issues import get_recommendations as get_issue_recommendations
-    import requests
+    token = request.access_token
     
-    headers = {
-        "Authorization": f"Bearer {request.access_token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28"
+    # Step 1: Get user info
+    user = github.get_user(token)
+    if not user:
+        raise HTTPException(status_code=400, detail="Failed to fetch user")
+    
+    username = user["username"]
+    
+    # Step 2: Get and filter repos
+    repos = github.get_repos(token)
+    user_repos = profile.filter_repos(repos, username)
+    
+    if not user_repos:
+        raise HTTPException(status_code=400, detail="No repos found")
+    
+    # Step 3: Create profile
+    user_profile = profile.create_profile(user_repos, username)
+    
+    # Step 4: Get languages to search
+    languages = [l["language"] for l in user_profile["languages"]["all"]]
+    if not languages:
+        languages = ["Python", "JavaScript"]
+    
+    # Step 5: Fetch issues for each language
+    all_issues = []
+    for lang in languages[:3]:
+        repos_with_issues = github.search_repos(lang, per_page=3, access_token=token)
+        for repo in repos_with_issues:
+            issues = github.get_issues(repo["full_name"], per_page=5, access_token=token)
+            for issue in issues:
+                issue["language"] = lang
+                issue["repo_stars"] = repo["stars"]
+            all_issues.extend(issues)
+    
+    # Step 6: Match and rank
+    recommendations = matcher.match_issues(all_issues, user_profile, top_n=10)
+    
+    return {
+        "status": "success",
+        "profile": {
+            "username": username,
+            "primary_language": user_profile["languages"]["primary"],
+            "experience_level": user_profile["experience"]["level"],
+            "interests": user_profile["interests"]
+        },
+        "recommendations": recommendations
     }
-    
-    try:
-        # Get user info
-        user_response = requests.get("https://api.github.com/user", headers=headers)
-        user_response.raise_for_status()
-        user_data = user_response.json()
-        username = user_data.get('login')
-        
-        # Get user repos
-        repos_response = requests.get(
-            "https://api.github.com/user/repos",
-            headers=headers,
-            params={'per_page': 100}
-        )
-        repos_response.raise_for_status()
-        all_repos = repos_response.json()
-        
-        # Filter and create profile
-        user_repos = filter_repo_data(all_repos, username)
-        profile = create_user_profile(user_repos, username)
-        
-        # Get recommendations
-        recommendations = get_issue_recommendations(profile, top_n=10)
-        
-        return {
-            "status": "success",
-            "profile": {
-                "username": username,
-                "primary_language": profile.get('languages', {}).get('primary'),
-                "experience_level": profile.get('experience', {}).get('level'),
-                "interests": profile.get('interests', [])
-            },
-            "recommendations": recommendations
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run(app, host="localhost", port=8000)
-
