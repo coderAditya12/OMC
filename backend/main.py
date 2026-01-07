@@ -74,5 +74,70 @@ def receive_github_auth(data: GitHubAuthData, response: Response):
         "email": data.email,
         "name": data.name
     }}
+
+
+class RecommendRequest(BaseModel):
+    access_token: str
+
+
+@app.post("/recommend")
+def get_recommendations(request: RecommendRequest):
+    """
+    Get issue recommendations based on user's GitHub profile.
+    
+    1. Fetch user repos using access_token
+    2. Create user profile
+    3. Fetch matching issues
+    4. Return top 10 matches
+    """
+    from backend.test import filter_repo_data, create_user_profile, get_user_info
+    from backend.issues import get_recommendations as get_issue_recommendations
+    import requests
+    
+    headers = {
+        "Authorization": f"Bearer {request.access_token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    
+    try:
+        # Get user info
+        user_response = requests.get("https://api.github.com/user", headers=headers)
+        user_response.raise_for_status()
+        user_data = user_response.json()
+        username = user_data.get('login')
+        
+        # Get user repos
+        repos_response = requests.get(
+            "https://api.github.com/user/repos",
+            headers=headers,
+            params={'per_page': 100}
+        )
+        repos_response.raise_for_status()
+        all_repos = repos_response.json()
+        
+        # Filter and create profile
+        user_repos = filter_repo_data(all_repos, username)
+        profile = create_user_profile(user_repos, username)
+        
+        # Get recommendations
+        recommendations = get_issue_recommendations(profile, top_n=10)
+        
+        return {
+            "status": "success",
+            "profile": {
+                "username": username,
+                "primary_language": profile.get('languages', {}).get('primary'),
+                "experience_level": profile.get('experience', {}).get('level'),
+                "interests": profile.get('interests', [])
+            },
+            "recommendations": recommendations
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="localhost", port=8000)
+

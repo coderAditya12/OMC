@@ -3,16 +3,74 @@
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+
+interface Issue {
+    id: number;
+    title: string;
+    url: string;
+    repo: string;
+    labels: string[];
+    language: string;
+    match_score: number;
+    comments: number;
+}
+
+interface ProfileSummary {
+    username: string;
+    primary_language: string;
+    experience_level: string;
+    interests: string[];
+}
 
 export default function HomePage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const [recommendations, setRecommendations] = useState<Issue[]>([]);
+    const [profile, setProfile] = useState<ProfileSummary | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
         if (status === "unauthenticated") {
             router.push("/login");
         }
     }, [status, router]);
+
+    // Fetch recommendations when session is available
+    useEffect(() => {
+        const fetchRecommendations = async () => {
+            if (session?.accessToken && !loading && recommendations.length === 0) {
+                setLoading(true);
+                setError(null);
+                try {
+                    const response = await fetch("http://localhost:8000/recommend", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            access_token: session.accessToken,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch recommendations");
+                    }
+
+                    const data = await response.json();
+                    setRecommendations(data.recommendations || []);
+                    setProfile(data.profile || null);
+                } catch (err) {
+                    setError(err instanceof Error ? err.message : "Something went wrong");
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchRecommendations();
+    }, [session, loading, recommendations.length]);
 
     if (status === "loading") {
         return (
@@ -26,6 +84,18 @@ export default function HomePage() {
         return null;
     }
 
+    const getScoreColor = (score: number) => {
+        if (score >= 70) return "from-emerald-500 to-green-500";
+        if (score >= 50) return "from-amber-500 to-orange-500";
+        return "from-blue-500 to-cyan-500";
+    };
+
+    const getScoreBg = (score: number) => {
+        if (score >= 70) return "bg-emerald-500/20 border-emerald-500/30";
+        if (score >= 50) return "bg-amber-500/20 border-amber-500/30";
+        return "bg-blue-500/20 border-blue-500/30";
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
             {/* Navigation */}
@@ -35,7 +105,7 @@ export default function HomePage() {
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
                             <span className="text-white font-bold text-xl">O</span>
                         </div>
-                        <span className="text-white font-semibold text-xl tracking-tight">OMC</span>
+                        <span className="text-white font-semibold text-xl tracking-tight">OpenSource Compass</span>
                     </div>
                     <div className="flex items-center gap-4">
                         {session.user?.image && (
@@ -67,7 +137,7 @@ export default function HomePage() {
 
                 <div className="max-w-6xl mx-auto relative z-10">
                     {/* Welcome Section */}
-                    <div className="mb-12">
+                    <div className="mb-8">
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
                             Welcome back,{" "}
                             <span className="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
@@ -76,117 +146,188 @@ export default function HomePage() {
                             !
                         </h1>
                         <p className="text-lg text-white/60">
-                            Ready to boost your productivity with AI?
+                            Find your perfect open source contribution matching your skills
                         </p>
                     </div>
 
-                    {/* User Profile Card */}
-                    <div className="grid md:grid-cols-3 gap-6 mb-12">
-                        <div className="md:col-span-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                            <div className="flex flex-col items-center text-center">
-                                {session.user?.image ? (
+                    {/* Profile Summary Card */}
+                    {profile && (
+                        <div className="mb-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+                            <div className="flex flex-wrap items-center gap-4">
+                                {session.user?.image && (
                                     <Image
                                         src={session.user.image}
                                         alt="Profile"
-                                        width={80}
-                                        height={80}
-                                        className="rounded-full border-4 border-purple-500/50 mb-4"
+                                        width={60}
+                                        height={60}
+                                        className="rounded-full border-2 border-purple-500/50"
                                     />
-                                ) : (
-                                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-4">
-                                        <span className="text-white text-2xl font-bold">
-                                            {session.user?.name?.[0] || "U"}
-                                        </span>
-                                    </div>
                                 )}
-                                <h3 className="text-xl font-semibold text-white mb-1">
-                                    {session.user?.name || "User"}
-                                </h3>
-                                <p className="text-white/60 text-sm">{session.user?.email}</p>
-                                <div className="mt-4 px-4 py-1.5 bg-green-500/20 border border-green-500/30 rounded-full">
-                                    <span className="text-green-400 text-sm font-medium">● Active</span>
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-semibold text-white">@{profile.username}</h3>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        <span className="px-3 py-1 bg-violet-500/20 border border-violet-500/30 rounded-full text-violet-300 text-sm">
+                                            {profile.primary_language}
+                                        </span>
+                                        <span className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-300 text-sm capitalize">
+                                            {profile.experience_level}
+                                        </span>
+                                        {profile.interests.slice(0, 3).map((interest) => (
+                                            <span
+                                                key={interest}
+                                                className="px-3 py-1 bg-white/10 border border-white/20 rounded-full text-white/70 text-sm"
+                                            >
+                                                {interest}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    )}
 
-                        {/* Quick Stats */}
-                        <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4 shadow-lg">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                    </svg>
-                                </div>
-                                <h3 className="text-3xl font-bold text-white mb-1">0</h3>
-                                <p className="text-white/60">Conversations</p>
-                            </div>
-
-                            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mb-4 shadow-lg">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                                    </svg>
-                                </div>
-                                <h3 className="text-3xl font-bold text-white mb-1">0</h3>
-                                <p className="text-white/60">Tasks Completed</p>
-                            </div>
-
-                            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mb-4 shadow-lg">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                <h3 className="text-3xl font-bold text-white mb-1">0h</h3>
-                                <p className="text-white/60">Time Saved</p>
-                            </div>
-
-                            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center mb-4 shadow-lg">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                                    </svg>
-                                </div>
-                                <h3 className="text-3xl font-bold text-white mb-1">—</h3>
-                                <p className="text-white/60">Productivity Score</p>
-                            </div>
+                    {/* Recommendations Section */}
+                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                                <span className="text-3xl">🎯</span>
+                                Recommended Issues For You
+                            </h2>
+                            <button
+                                onClick={() => {
+                                    setRecommendations([]);
+                                    setLoading(false);
+                                }}
+                                className="px-4 py-2 text-sm font-medium text-purple-300 hover:text-white border border-purple-500/30 rounded-lg hover:bg-purple-500/20 transition-all"
+                            >
+                                🔄 Refresh
+                            </button>
                         </div>
+
+                        {/* Loading State */}
+                        {loading && (
+                            <div className="flex flex-col items-center justify-center py-16">
+                                <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                <p className="text-white/60">Analyzing your profile and finding matches...</p>
+                                <p className="text-white/40 text-sm mt-2">This may take a few seconds</p>
+                            </div>
+                        )}
+
+                        {/* Error State */}
+                        {error && (
+                            <div className="text-center py-12">
+                                <div className="text-5xl mb-4">😕</div>
+                                <p className="text-red-400 mb-2">{error}</p>
+                                <button
+                                    onClick={() => {
+                                        setError(null);
+                                        setRecommendations([]);
+                                    }}
+                                    className="text-purple-400 hover:text-purple-300"
+                                >
+                                    Try again
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Recommendations List */}
+                        {!loading && !error && recommendations.length > 0 && (
+                            <div className="space-y-4">
+                                {recommendations.map((issue, index) => (
+                                    <a
+                                        key={issue.id || index}
+                                        href={issue.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block group"
+                                    >
+                                        <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all">
+                                            <div className="flex items-start gap-4">
+                                                {/* Match Score Badge */}
+                                                <div className={`flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br ${getScoreColor(issue.match_score)} flex flex-col items-center justify-center shadow-lg`}>
+                                                    <span className="text-white font-bold text-lg">{Math.round(issue.match_score)}%</span>
+                                                    <span className="text-white/80 text-xs">match</span>
+                                                </div>
+
+                                                {/* Issue Details */}
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="text-lg font-semibold text-white group-hover:text-purple-300 transition-colors line-clamp-2 mb-2">
+                                                        {issue.title}
+                                                    </h3>
+
+                                                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                                                        <span className="text-white/50 text-sm">📦 {issue.repo}</span>
+                                                        {issue.language && (
+                                                            <span className="px-2 py-0.5 bg-violet-500/20 border border-violet-500/30 rounded text-violet-300 text-xs">
+                                                                {issue.language}
+                                                            </span>
+                                                        )}
+                                                        {issue.comments === 0 && (
+                                                            <span className="px-2 py-0.5 bg-green-500/20 border border-green-500/30 rounded text-green-300 text-xs">
+                                                                🔥 Fresh
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Labels */}
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {issue.labels.slice(0, 4).map((label) => (
+                                                            <span
+                                                                key={label}
+                                                                className="px-2 py-0.5 bg-white/10 rounded text-white/60 text-xs"
+                                                            >
+                                                                {label}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Arrow */}
+                                                <div className="flex-shrink-0 self-center">
+                                                    <svg className="w-6 h-6 text-white/30 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {!loading && !error && recommendations.length === 0 && (
+                            <div className="text-center py-12">
+                                <div className="text-5xl mb-4">🔍</div>
+                                <p className="text-white/60">No recommendations yet</p>
+                                <p className="text-white/40 text-sm">We&apos;ll analyze your profile and find matching issues</p>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Quick Actions */}
-                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
-                        <h2 className="text-2xl font-bold text-white mb-6">Quick Actions</h2>
-                        <div className="grid md:grid-cols-3 gap-4">
-                            <button className="group p-6 rounded-xl bg-gradient-to-br from-violet-600/20 to-purple-600/20 border border-violet-500/30 hover:border-violet-500/60 transition-all text-left">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                </div>
-                                <h3 className="text-lg font-semibold text-white mb-1">New Chat</h3>
-                                <p className="text-white/60 text-sm">Start a conversation with AI</p>
-                            </button>
-
-                            <button className="group p-6 rounded-xl bg-white/5 border border-white/10 hover:border-white/30 transition-all text-left">
-                                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                    </svg>
-                                </div>
-                                <h3 className="text-lg font-semibold text-white mb-1">View History</h3>
-                                <p className="text-white/60 text-sm">Browse past conversations</p>
-                            </button>
-
-                            <button className="group p-6 rounded-xl bg-white/5 border border-white/10 hover:border-white/30 transition-all text-left">
-                                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </div>
-                                <h3 className="text-lg font-semibold text-white mb-1">Settings</h3>
-                                <p className="text-white/60 text-sm">Customize your experience</p>
-                            </button>
+                    {/* Stats Section */}
+                    <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-center">
+                            <div className="text-3xl font-bold text-white">{recommendations.length}</div>
+                            <div className="text-white/60 text-sm">Issues Found</div>
+                        </div>
+                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-center">
+                            <div className="text-3xl font-bold text-white">
+                                {recommendations.length > 0 ? Math.round(recommendations[0].match_score) : 0}%
+                            </div>
+                            <div className="text-white/60 text-sm">Top Match</div>
+                        </div>
+                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-center">
+                            <div className="text-3xl font-bold text-white">
+                                {new Set(recommendations.map(r => r.language)).size}
+                            </div>
+                            <div className="text-white/60 text-sm">Languages</div>
+                        </div>
+                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-center">
+                            <div className="text-3xl font-bold text-white">
+                                {new Set(recommendations.map(r => r.repo)).size}
+                            </div>
+                            <div className="text-white/60 text-sm">Repos</div>
                         </div>
                     </div>
                 </div>
