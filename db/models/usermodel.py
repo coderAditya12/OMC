@@ -26,5 +26,8 @@ def init_db():
 def create_sesseion():
     return Session(engine)
 
+# Import chat models so they're included in Base.metadata
+from db.models.chatmodel import ChatSession, ChatMessage
+
 # Initialize database tables on module load
 init_db()

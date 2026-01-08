@@ -122,3 +122,24 @@ def get_issues(repo_full_name: str, per_page: int = 5, access_token: str = None)
     except Exception as e:
         print(f"Error fetching issues from {repo_full_name}: {e}")
         return []
+
+
+def get_readme(repo_full_name: str, access_token: str = None) -> str | None:
+    """Fetch README content from repo"""
+    headers = get_headers(access_token) if access_token else {}
+    
+    try:
+        response = requests.get(
+            f"{GITHUB_URL}/repos/{repo_full_name}/readme",
+            headers=headers
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        import base64
+        content = base64.b64decode(data.get("content", "")).decode("utf-8")
+        return content[:5000]
+    except Exception as e:
+        print(f"Error fetching README: {e}")
+        return None
+

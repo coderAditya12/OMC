@@ -5,8 +5,9 @@ Clean, modular FastAPI server
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import uuid
 
-from backend.services import github, profile, matcher
+from backend.services import github, profile, matcher, agent
 
 
 # Initialize FastAPI
@@ -19,6 +20,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_headers=["*"],
 )
+
+
+# In-memory session storage (will move to PostgreSQL)
+_sessions = {}
 
 
 # Request/Response Models
@@ -34,6 +39,17 @@ class RecommendRequest(BaseModel):
     access_token: str
 
 
+class ChatRequest(BaseModel):
+    access_token: str
+    session_id: str | None = None
+    repo_name: str
+    issue_title: str
+    issue_body: str
+    issue_labels: list[str] = []
+    message: str
+    system_prompt: str | None = None
+
+
 # Routes
 @app.get("/")
 def health():
@@ -43,8 +59,6 @@ def health():
 @app.post("/auth/github")
 def auth_github(data: AuthRequest, response: Response):
     """Handle GitHub OAuth callback"""
-    # For now, just return success
-    # TODO: Add database storage when needed
     return {
         "status": "success",
         "user": {
@@ -57,40 +71,25 @@ def auth_github(data: AuthRequest, response: Response):
 
 @app.post("/recommend")
 def get_recommendations(request: RecommendRequest):
-    """
-    Get issue recommendations based on user's GitHub profile
-    
-    1. Fetch user info & repos
-    2. Build user profile
-    3. Search for issues matching languages
-    4. Score and rank issues
-    5. Return top matches
-    """
+    """Get issue recommendations based on user's GitHub profile"""
     token = request.access_token
     
-    # Step 1: Get user info
     user = github.get_user(token)
     if not user:
         raise HTTPException(status_code=400, detail="Failed to fetch user")
     
     username = user["username"]
-    
-    # Step 2: Get and filter repos
     repos = github.get_repos(token)
     user_repos = profile.filter_repos(repos, username)
     
     if not user_repos:
         raise HTTPException(status_code=400, detail="No repos found")
     
-    # Step 3: Create profile
     user_profile = profile.create_profile(user_repos, username)
-    
-    # Step 4: Get languages to search
     languages = [l["language"] for l in user_profile["languages"]["all"]]
     if not languages:
         languages = ["Python", "JavaScript"]
     
-    # Step 5: Fetch issues for each language
     all_issues = []
     for lang in languages[:3]:
         repos_with_issues = github.search_repos(lang, per_page=3, access_token=token)
@@ -101,7 +100,6 @@ def get_recommendations(request: RecommendRequest):
                 issue["repo_stars"] = repo["stars"]
             all_issues.extend(issues)
     
-    # Step 6: Match and rank
     recommendations = matcher.match_issues(all_issues, user_profile, top_n=10)
     
     return {
@@ -116,6 +114,60 @@ def get_recommendations(request: RecommendRequest):
     }
 
 
+@app.post("/chat")
+def chat_with_agent(request: ChatRequest):
+    """
+    Chat with AI agent about a specific issue
+    
+    - Creates LangGraph agent with issue/repo context
+    - Agent can use tools to explore the codebase
+    - Returns AI response
+    """
+    session_id = request.session_id or str(uuid.uuid4())
+    
+    issue = {
+        "title": request.issue_title,
+        "body": request.issue_body,
+        "labels": request.issue_labels
+    }
+    
+    try:
+        # Check for existing session
+        if session_id in _sessions:
+            compiled_agent, state = _sessions[session_id]
+        else:
+            # Create new agent
+            compiled_agent, state = agent.create_agent(
+                issue=issue,
+                repo_name=request.repo_name,
+                access_token=request.access_token,
+                system_prompt=request.system_prompt
+            )
+        
+        # Chat with agent
+        response, updated_messages = agent.chat(
+            agent=compiled_agent,
+            state=state,
+            user_message=request.message
+        )
+        
+        # Update session state
+        state["messages"] = updated_messages
+        _sessions[session_id] = (compiled_agent, state)
+        
+        # TODO: Save to PostgreSQL
+        
+        return {
+            "status": "success",
+            "session_id": session_id,
+            "response": response
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="localhost", port=8000)
+
