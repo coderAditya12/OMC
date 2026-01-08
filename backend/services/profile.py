@@ -35,6 +35,7 @@ def filter_repos(repos: list, username: str) -> list:
                 "description": repo.get("description"),
                 "pushed_at": repo.get("pushed_at")
             })
+    print(result)
     return result
 
 

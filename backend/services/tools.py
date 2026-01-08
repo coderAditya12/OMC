@@ -29,14 +29,14 @@ def _get_headers():
 
 
 @tool
-def get_file_tree(path: str = "", depth: int = 2) -> str:
+def get_file_tree(path: str = "", depth: int = 3) -> str:
     """
     Get the complete directory structure of the repository.
     Use this to explore what files and folders exist.
     
     Args:
         path: Directory path to explore (empty for root)
-        depth: How deep to explore (default 2 levels)
+        depth: How deep to explore (default 3 levels)
     
     Returns:
         Complete file tree with subdirectories
