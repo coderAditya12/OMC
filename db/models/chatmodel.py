@@ -4,7 +4,8 @@ Chat model - stores chat history per issue
 from sqlalchemy import String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
-from db.models.usermodel import Base
+
+from db.models.base import Base
 
 
 class ChatSession(Base):

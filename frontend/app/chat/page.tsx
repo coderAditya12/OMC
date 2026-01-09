@@ -26,6 +26,7 @@ function ChatContent() {
     const issueBody = searchParams.get("body") || "";
     const issueLabels = searchParams.get("labels")?.split(",") || [];
     const repoName = searchParams.get("repo") || "";
+    const issueUrl = searchParams.get("url") || "";
 
     useEffect(() => {
         if (status === "unauthenticated") {
@@ -51,13 +52,15 @@ function ChatContent() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     access_token: session?.accessToken,
+                    user_id: session?.user?.id || "anonymous",
                     session_id: sessionId,
                     repo_name: repoName,
+                    issue_url: issueUrl,
                     issue_title: issueTitle,
                     issue_body: issueBody,
                     issue_labels: issueLabels,
                     message: userMessage,
-                    system_prompt: null // User will set this later
+                    system_prompt: null
                 })
             });
 
@@ -138,8 +141,8 @@ function ChatContent() {
                         >
                             <div
                                 className={`max-w-[80%] p-4 rounded-2xl ${msg.role === "user"
-                                        ? "bg-purple-600 text-white"
-                                        : "bg-white/10 text-white/90 border border-white/10"
+                                    ? "bg-purple-600 text-white"
+                                    : "bg-white/10 text-white/90 border border-white/10"
                                     }`}
                             >
                                 {msg.role === "user" ? (

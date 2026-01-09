@@ -63,7 +63,7 @@ ANTI-HALLUCINATION RULES (MANDATORY):
     2. tell user this file contains specifically what.
     2. then explain the code in detail so user can understand it very well.
 
-�️ **Steps to Contribute**
+🛠️ **Steps to Contribute**
 1. Fork and clone the repository
 2. [Specific setup steps based on the actual tech stack]
 3. [Where to find the relevant code - reference actual file paths]
@@ -207,16 +207,11 @@ def chat(
     last_message = result["messages"][-1]
     content = last_message.content if hasattr(last_message, "content") else str(last_message)
     
-    # DEBUG: Print raw content
-    print(f"[DEBUG] Raw content type: {type(content)}")
-    print(f"[DEBUG] Raw content: {content[:500] if isinstance(content, str) else content}")
-    
     # Handle Gemini 2.5 response format
     if isinstance(content, list):
         # Extract text from each part - preserve newlines between parts
         parts = []
         for part in content:
-            print(f"[DEBUG] Part type: {type(part)}, value: {part}")
             if isinstance(part, dict):
                 parts.append(part.get("text", ""))
             elif isinstance(part, str):
@@ -228,9 +223,6 @@ def chat(
         response = content.get("text", str(content))
     else:
         response = str(content)
-    
-    print(f"[DEBUG] Final response length: {len(response)}")
-    print(f"[DEBUG] Final response preview: {response[:300] if response else 'EMPTY'}")
     
     return response, result["messages"]
 

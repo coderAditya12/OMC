@@ -291,7 +291,8 @@ export default function HomePage() {
                                                         title: issue.title,
                                                         body: issue.body || "",
                                                         labels: issue.labels.join(","),
-                                                        repo: issue.repo
+                                                        repo: issue.repo,
+                                                        url: issue.url
                                                     });
                                                     router.push(`/chat?${params.toString()}`);
                                                 }}

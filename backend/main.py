@@ -2,12 +2,14 @@
 OpenSource Compass - Backend API
 Clean, modular FastAPI server
 """
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 import uuid
 
-from backend.services import github, profile, matcher, agent
+from backend.services import github, profile, matcher, agent, chat_db
+from db.database import get_db
 
 
 # Initialize FastAPI
@@ -41,8 +43,10 @@ class RecommendRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     access_token: str
+    user_id: str  # GitHub user ID for session tracking
     session_id: str | None = None
     repo_name: str
+    issue_url: str  # Full URL to the issue
     issue_title: str
     issue_body: str
     issue_labels: list[str] = []
@@ -115,16 +119,11 @@ def get_recommendations(request: RecommendRequest):
 
 
 @app.post("/chat")
-def chat_with_agent(request: ChatRequest):
+def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
     """
-    Chat with AI agent about a specific issue
-    
-    - Creates LangGraph agent with issue/repo context
-    - Agent can use tools to explore the codebase
-    - Returns AI response
+    Chat with AI agent about a specific issue.
+    Stores chat history in PostgreSQL.
     """
-    session_id = request.session_id or str(uuid.uuid4())
-    
     issue = {
         "title": request.issue_title,
         "body": request.issue_body,
@@ -132,7 +131,18 @@ def chat_with_agent(request: ChatRequest):
     }
     
     try:
-        # Check for existing session
+        # Get or create chat session in database
+        chat_session, is_new = chat_db.get_or_create_session(
+            db=db,
+            session_id=request.session_id,
+            user_id=request.user_id,
+            issue_url=request.issue_url,
+            repo_name=request.repo_name,
+            issue_title=request.issue_title
+        )
+        session_id = chat_session.id
+        
+        # Check for existing agent in memory cache
         if session_id in _sessions:
             compiled_agent, state = _sessions[session_id]
         else:
@@ -143,6 +153,14 @@ def chat_with_agent(request: ChatRequest):
                 access_token=request.access_token,
                 system_prompt=request.system_prompt
             )
+            
+            # If session exists in DB but not memory, load previous messages
+            if not is_new:
+                db_messages = chat_db.get_session_messages(db, session_id)
+                # Messages are loaded into agent context on first response
+        
+        # Save user message to database
+        chat_db.save_message(db, session_id, "user", request.message)
         
         # Chat with agent
         response, updated_messages = agent.chat(
@@ -151,11 +169,12 @@ def chat_with_agent(request: ChatRequest):
             user_message=request.message
         )
         
-        # Update session state
+        # Save AI response to database
+        chat_db.save_message(db, session_id, "assistant", response)
+        
+        # Update session state in memory cache
         state["messages"] = updated_messages
         _sessions[session_id] = (compiled_agent, state)
-        
-        # TODO: Save to PostgreSQL
         
         return {
             "status": "success",
