@@ -52,6 +52,7 @@ export default function HomePage() {
                         },
                         body: JSON.stringify({
                             access_token: session.accessToken,
+                            user_email: session.user?.email || null,
                         }),
                     });
 

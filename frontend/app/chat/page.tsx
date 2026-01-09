@@ -1,32 +1,66 @@
 "use client";
 
+/**
+ * Chat Page - AI Assistant Interface
+ * 
+ * This is the main chat page that combines all the components.
+ * Components are kept in /components/chat/ folder.
+ */
+
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef, Suspense } from "react";
-import ReactMarkdown from "react-markdown";
+import useChatStore from "@/store/chatStore";
 
-interface Message {
-    role: "user" | "assistant";
-    content: string;
+// Import our chat components
+import ChatSidebar from "@/components/chat/ChatSidebar";
+import ChatHeader from "@/components/chat/ChatHeader";
+import ChatMessage from "@/components/chat/ChatMessage";
+import ChatInput from "@/components/chat/ChatInput";
+
+// ==========================================
+// Types
+// ==========================================
+
+interface ChatSession {
+    session_id: string;
+    issue_title: string;
+    repo_name: string;
+    created_at: string;
 }
+
+// ==========================================
+// Main Chat Component
+// ==========================================
 
 function ChatContent() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    const [messages, setMessages] = useState<Message[]>([]);
+    // Local state
     const [input, setInput] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [sessionId, setSessionId] = useState<string | null>(null);
+    const [previousSessions, setPreviousSessions] = useState<ChatSession[]>([]);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Get issue info from URL params
-    const issueTitle = searchParams.get("title") || "Unknown Issue";
-    const issueBody = searchParams.get("body") || "";
-    const issueLabels = searchParams.get("labels")?.split(",") || [];
-    const repoName = searchParams.get("repo") || "";
-    const issueUrl = searchParams.get("url") || "";
+    // Zustand store
+    const messages = useChatStore((state) => state.messages);
+    const sessionId = useChatStore((state) => state.sessionId);
+    const isLoading = useChatStore((state) => state.isLoading);
+    const issueTitle = useChatStore((state) => state.issueTitle);
+    const repoName = useChatStore((state) => state.repoName);
+
+    const addMessage = useChatStore((state) => state.addMessage);
+    const setSessionId = useChatStore((state) => state.setSessionId);
+    const setLoading = useChatStore((state) => state.setLoading);
+    const setIssueContext = useChatStore((state) => state.setIssueContext);
+    const loadMessages = useChatStore((state) => state.loadMessages);
+    const clearChat = useChatStore((state) => state.clearChat);
+
+    // ==========================================
+    // Effects
+    // ==========================================
 
     useEffect(() => {
         if (status === "unauthenticated") {
@@ -35,30 +69,116 @@ function ChatContent() {
     }, [status, router]);
 
     useEffect(() => {
+        const title = searchParams.get("title") || "Unknown Issue";
+        const body = searchParams.get("body") || "";
+        const labels = searchParams.get("labels")?.split(",") || [];
+        const repo = searchParams.get("repo") || "";
+        const url = searchParams.get("url") || "";
+        const existingSessionId = searchParams.get("session_id");
+
+        clearChat();
+        setIssueContext({
+            issueTitle: title,
+            issueBody: body,
+            issueLabels: labels,
+            repoName: repo,
+            issueUrl: url,
+        });
+
+        if (existingSessionId) {
+            loadChatHistory(existingSessionId);
+        }
+    }, [searchParams]);
+
+    // Load previous sessions when user is authenticated
+    useEffect(() => {
+        // Use email as user identifier since NextAuth doesn't include id by default
+        if (status === "authenticated" && session?.user?.email) {
+            loadPreviousSessions();
+        }
+    }, [status, session?.user?.email]);
+
+    useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
+    // ==========================================
+    // API Functions
+    // ==========================================
+
+    const loadPreviousSessions = async () => {
+        try {
+            const userId = session?.user?.email || "anonymous";
+            console.log("[DEBUG] Loading sessions for user:", userId);
+
+            const response = await fetch(`http://localhost:8000/chat/sessions/${userId}`);
+            const data = await response.json();
+
+            console.log("[DEBUG] Sessions response:", data);
+
+            if (data.status === "success") {
+                setPreviousSessions(data.sessions);
+            }
+        } catch (error) {
+            console.error("Failed to load sessions:", error);
+        }
+    };
+
+    const loadChatHistory = async (sessionIdToLoad: string) => {
+        try {
+            setLoading(true);
+            const response = await fetch(`http://localhost:8000/chat/history/${sessionIdToLoad}`);
+            const data = await response.json();
+
+            if (data.status === "success") {
+                setSessionId(sessionIdToLoad);
+                setIssueContext({
+                    issueTitle: data.issue_title,
+                    issueBody: "",
+                    issueLabels: [],
+                    repoName: data.repo_name,
+                    issueUrl: "",
+                });
+                const historyMessages = data.messages.map((msg: { role: string; content: string }) => ({
+                    role: msg.role as "user" | "assistant",
+                    content: msg.content
+                }));
+                loadMessages(historyMessages);
+            }
+        } catch (error) {
+            console.error("Failed to load chat history:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSessionClick = (clickedSession: ChatSession) => {
+        clearChat();
+        loadChatHistory(clickedSession.session_id);
+    };
+
     const sendMessage = async () => {
-        if (!input.trim() || loading) return;
+        if (!input.trim() || isLoading) return;
 
         const userMessage = input.trim();
         setInput("");
-        setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+        addMessage({ role: "user", content: userMessage });
         setLoading(true);
 
         try {
+            const store = useChatStore.getState();
             const response = await fetch("http://localhost:8000/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     access_token: session?.accessToken,
-                    user_id: session?.user?.id || "anonymous",
+                    user_email: session?.user?.email || "anonymous",
                     session_id: sessionId,
-                    repo_name: repoName,
-                    issue_url: issueUrl,
-                    issue_title: issueTitle,
-                    issue_body: issueBody,
-                    issue_labels: issueLabels,
+                    repo_name: store.repoName,
+                    issue_url: store.issueUrl,
+                    issue_title: store.issueTitle,
+                    issue_body: store.issueBody,
+                    issue_labels: store.issueLabels,
                     message: userMessage,
                     system_prompt: null
                 })
@@ -68,16 +188,21 @@ function ChatContent() {
 
             if (data.status === "success") {
                 setSessionId(data.session_id);
-                setMessages(prev => [...prev, { role: "assistant", content: data.response }]);
+                addMessage({ role: "assistant", content: data.response });
+                loadPreviousSessions();
             } else {
-                setMessages(prev => [...prev, { role: "assistant", content: "Error: " + (data.detail || "Something went wrong") }]);
+                addMessage({ role: "assistant", content: "Error: " + (data.detail || "Something went wrong") });
             }
-        } catch (err) {
-            setMessages(prev => [...prev, { role: "assistant", content: "Failed to connect to server" }]);
+        } catch (error) {
+            addMessage({ role: "assistant", content: "Failed to connect to server" });
         } finally {
             setLoading(false);
         }
     };
+
+    // ==========================================
+    // Loading State
+    // ==========================================
 
     if (status === "loading") {
         return (
@@ -87,113 +212,59 @@ function ChatContent() {
         );
     }
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
-            {/* Header */}
-            <header className="border-b border-white/10 bg-black/20 backdrop-blur-md p-4">
-                <div className="max-w-4xl mx-auto flex items-center gap-4">
-                    <button
-                        onClick={() => router.back()}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                    >
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                    <div className="flex-1 min-w-0">
-                        <h1 className="text-white font-semibold truncate">{issueTitle}</h1>
-                        <p className="text-white/50 text-sm truncate">📦 {repoName}</p>
-                    </div>
-                </div>
-            </header>
+    const suggestedPrompts = ["Explain the issue", "Show file tree", "What are the prerequisites?", "How do I start?"];
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4">
-                <div className="max-w-4xl mx-auto space-y-4">
-                    {/* Welcome Message */}
+    // ==========================================
+    // Render
+    // ==========================================
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex">
+
+            {/* Sidebar Component */}
+            <ChatSidebar
+                sessions={previousSessions}
+                currentSessionId={sessionId}
+                isOpen={sidebarOpen}
+                onSessionClick={handleSessionClick}
+            />
+
+            {/* Main Chat Area */}
+            <div className="flex-1 flex flex-col max-w-4xl mx-auto">
+
+                {/* Header Component */}
+                <ChatHeader
+                    issueTitle={issueTitle}
+                    repoName={repoName}
+                    sidebarOpen={sidebarOpen}
+                    onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                />
+
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+                    {/* Suggested Prompts */}
                     {messages.length === 0 && (
-                        <div className="text-center py-12">
-                            <div className="text-6xl mb-4">🤖</div>
-                            <h2 className="text-2xl font-bold text-white mb-2">AI Assistant</h2>
-                            <p className="text-white/60 max-w-md mx-auto">
-                                I have context about this issue and can help you understand the codebase.
-                                Ask me anything!
-                            </p>
-                            <div className="mt-6 flex flex-wrap gap-2 justify-center">
-                                {["Explain this issue", "Show me the file structure", "What files should I look at?"].map((suggestion) => (
-                                    <button
-                                        key={suggestion}
-                                        onClick={() => setInput(suggestion)}
-                                        className="px-4 py-2 bg-white/10 border border-white/20 rounded-full text-white/80 text-sm hover:bg-white/20 transition-colors"
-                                    >
-                                        {suggestion}
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="flex flex-wrap gap-2 justify-center py-8">
+                            {suggestedPrompts.map((prompt, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setInput(prompt)}
+                                    className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-white/80 text-sm transition-colors"
+                                >
+                                    {prompt}
+                                </button>
+                            ))}
                         </div>
                     )}
 
-                    {/* Chat Messages */}
+                    {/* Messages using ChatMessage Component */}
                     {messages.map((msg, i) => (
-                        <div
-                            key={i}
-                            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                        >
-                            <div
-                                className={`max-w-[80%] p-4 rounded-2xl ${msg.role === "user"
-                                    ? "bg-purple-600 text-white"
-                                    : "bg-white/10 text-white/90 border border-white/10"
-                                    }`}
-                            >
-                                {msg.role === "user" ? (
-                                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                                ) : (
-                                    <div className="prose prose-invert prose-sm max-w-none">
-                                        <ReactMarkdown
-                                            components={{
-                                                pre: ({ children }) => (
-                                                    <pre className="bg-black/30 p-3 rounded-lg overflow-x-auto text-sm">
-                                                        {children}
-                                                    </pre>
-                                                ),
-                                                code: ({ children }) => (
-                                                    <code className="bg-black/30 px-1 py-0.5 rounded text-purple-300">
-                                                        {children}
-                                                    </code>
-                                                ),
-                                                ul: ({ children }) => (
-                                                    <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>
-                                                ),
-                                                ol: ({ children }) => (
-                                                    <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>
-                                                ),
-                                                h1: ({ children }) => (
-                                                    <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>
-                                                ),
-                                                h2: ({ children }) => (
-                                                    <h2 className="text-lg font-bold mt-3 mb-2">{children}</h2>
-                                                ),
-                                                h3: ({ children }) => (
-                                                    <h3 className="text-base font-semibold mt-2 mb-1">{children}</h3>
-                                                ),
-                                                p: ({ children }) => (
-                                                    <p className="my-2">{children}</p>
-                                                ),
-                                                strong: ({ children }) => (
-                                                    <strong className="font-bold text-white">{children}</strong>
-                                                ),
-                                            }}
-                                        >
-                                            {msg.content}
-                                        </ReactMarkdown>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        <ChatMessage key={i} role={msg.role} content={msg.content} />
                     ))}
 
                     {/* Loading */}
-                    {loading && (
+                    {isLoading && (
                         <div className="flex justify-start">
                             <div className="bg-white/10 border border-white/10 p-4 rounded-2xl">
                                 <div className="flex gap-1">
@@ -207,31 +278,22 @@ function ChatContent() {
 
                     <div ref={messagesEndRef} />
                 </div>
-            </div>
 
-            {/* Input */}
-            <div className="border-t border-white/10 bg-black/20 backdrop-blur-md p-4">
-                <div className="max-w-4xl mx-auto flex gap-3">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                        placeholder="Ask about this issue..."
-                        className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50"
-                    />
-                    <button
-                        onClick={sendMessage}
-                        disabled={loading || !input.trim()}
-                        className="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-xl text-white font-medium transition-colors"
-                    >
-                        Send
-                    </button>
-                </div>
+                {/* Input Component */}
+                <ChatInput
+                    value={input}
+                    onChange={setInput}
+                    onSend={sendMessage}
+                    disabled={isLoading}
+                />
             </div>
-        </div >
+        </div>
     );
 }
+
+// ==========================================
+// Wrapper with Suspense
+// ==========================================
 
 export default function ChatPage() {
     return (
@@ -244,4 +306,3 @@ export default function ChatPage() {
         </Suspense>
     );
 }
-

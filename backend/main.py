@@ -39,11 +39,12 @@ class AuthRequest(BaseModel):
 
 class RecommendRequest(BaseModel):
     access_token: str
+    user_email: str | None = None  # User's email for filtering chatted issues
 
 
 class ChatRequest(BaseModel):
     access_token: str
-    user_id: str  # GitHub user ID for session tracking
+    user_email: str  # User's email for session tracking
     session_id: str | None = None
     repo_name: str
     issue_url: str  # Full URL to the issue
@@ -74,8 +75,11 @@ def auth_github(data: AuthRequest, response: Response):
 
 
 @app.post("/recommend")
-def get_recommendations(request: RecommendRequest):
-    """Get issue recommendations based on user's GitHub profile"""
+def get_recommendations(request: RecommendRequest, db: Session = Depends(get_db)):
+    """
+    Get issue recommendations based on user's GitHub profile.
+    Filters out issues the user has already chatted about.
+    """
     token = request.access_token
     
     user = github.get_user(token)
@@ -104,7 +108,27 @@ def get_recommendations(request: RecommendRequest):
                 issue["repo_stars"] = repo["stars"]
             all_issues.extend(issues)
     
-    recommendations = matcher.match_issues(all_issues, user_profile, top_n=10)
+    # Get issues the user has already chatted about
+    chatted_issue_urls = set()
+    if request.user_email:
+        # Query chat sessions for this user (user_email is stored in user_id column)
+        user_sessions = db.query(chat_db.ChatSession).filter(
+            chat_db.ChatSession.user_id == request.user_email
+        ).all()
+        # Collect all issue URLs they've chatted about
+        for session in user_sessions:
+            chatted_issue_urls.add(session.issue_url)
+        print(f"[DEBUG] User {request.user_email} has chatted about {len(chatted_issue_urls)} issues")
+        print(f"[DEBUG] Chatted URLs: {chatted_issue_urls}")
+    
+    # Filter out issues the user has already chatted about
+    filtered_issues = [
+        issue for issue in all_issues 
+        if issue.get("url") not in chatted_issue_urls
+    ]
+    print(f"[DEBUG] Before filter: {len(all_issues)}, After filter: {len(filtered_issues)}")
+    
+    recommendations = matcher.match_issues(filtered_issues, user_profile, top_n=10)
     
     return {
         "status": "success",
@@ -114,7 +138,8 @@ def get_recommendations(request: RecommendRequest):
             "experience_level": user_profile["experience"]["level"],
             "interests": user_profile["interests"]
         },
-        "recommendations": recommendations
+        "recommendations": recommendations,
+        "filtered_count": len(chatted_issue_urls)
     }
 
 
@@ -135,7 +160,7 @@ def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
         chat_session, is_new = chat_db.get_or_create_session(
             db=db,
             session_id=request.session_id,
-            user_id=request.user_id,
+            user_id=request.user_email,  # Using email as user identifier
             issue_url=request.issue_url,
             repo_name=request.repo_name,
             issue_title=request.issue_title
@@ -186,7 +211,78 @@ def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==========================================
+# GET Routes for Chat History
+# ==========================================
+
+@app.get("/chat/history/{session_id}")
+def get_chat_history(session_id: str, db: Session = Depends(get_db)):
+    """
+    Get all messages for a specific chat session.
+    
+    This is used to load previous messages when the user returns to a chat.
+    """
+    # Step 1: Get the session from database
+    session = chat_db.get_session(db, session_id)
+    
+    # Step 2: Check if session exists
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+    
+    # Step 3: Get all messages for this session
+    messages = chat_db.get_session_messages(db, session_id)
+    
+    # Step 4: Convert messages to a simple list format
+    message_list = []
+    for msg in messages:
+        message_list.append({
+            "role": msg.role,
+            "content": msg.content,
+            "created_at": msg.created_at.isoformat()
+        })
+    
+    # Step 5: Return the response
+    return {
+        "status": "success",
+        "session_id": session_id,
+        "issue_title": session.issue_title,
+        "repo_name": session.repo_name,
+        "messages": message_list
+    }
+
+
+@app.get("/chat/sessions/{user_id}")
+def get_user_sessions(user_id: str, db: Session = Depends(get_db)):
+    """
+    Get all chat sessions for a specific user.
+    
+    This is used to show a list of previous conversations in the sidebar.
+    """
+    # Step 1: Query all sessions for this user
+    sessions = db.query(chat_db.ChatSession).filter(
+        chat_db.ChatSession.user_id == user_id
+    ).order_by(
+        chat_db.ChatSession.created_at.desc()
+    ).all()
+    
+    # Step 2: Convert sessions to a simple list format
+    session_list = []
+    for session in sessions:
+        session_list.append({
+            "session_id": session.id,
+            "issue_title": session.issue_title,
+            "repo_name": session.repo_name,
+            "created_at": session.created_at.isoformat()
+        })
+    
+    # Step 3: Return the response
+    return {
+        "status": "success",
+        "user_id": user_id,
+        "sessions": session_list
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="localhost", port=8000)
-
