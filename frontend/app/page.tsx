@@ -11,6 +11,8 @@ import Navbar from "@/components/landing/Navbar";
 import HeroSection from "@/components/landing/HeroSection";
 import FeaturesSection from "@/components/landing/FeaturesSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
+import TestimonialsSection from "@/components/landing/TestimonialsSection";
+import CTASection from "@/components/landing/CTASection";
 import Footer from "@/components/landing/Footer";
 import FloatingOrbs from "@/components/ui/FloatingOrbs";
 
@@ -28,6 +30,8 @@ export default function LandingPage() {
         <HeroSection />
         <FeaturesSection />
         <HowItWorksSection />
+        <TestimonialsSection />
+        <CTASection />
       </main>
 
       {/* Footer */}
