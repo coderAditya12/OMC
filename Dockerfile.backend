@@ -1,14 +1,9 @@
 FROM python:3.12-slim
 WORKDIR /app
-
-# Copy and install dependencies first (better caching)
 COPY requirement.txt /app/requirement.txt
 RUN pip install --no-cache-dir -r /app/requirement.txt
-
-# Copy all necessary folders
 COPY backend/ /app/backend/
 COPY db/ /app/db/
 COPY utils/ /app/utils/
-
 EXPOSE 8000
 CMD ["fastapi", "run", "/app/backend/main.py", "--host", "0.0.0.0", "--port", "8000"]
