@@ -26,7 +26,7 @@ export default function StatsGrid({ stats }: StatsGridProps) {
                     key={stat.label}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 + index * 0.1 }}
+                    transition={{ delay: 0.1 + index * 0.1 }}
                     whileHover={{ scale: 1.05, y: -4 }}
                     className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-5 text-center hover:border-emerald-500/30 transition-all"
                 >
