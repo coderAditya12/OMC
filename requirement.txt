@@ -7,3 +7,9 @@ uvicorn
 sqlmodel
 psycopg2-binary
 pyjwt
+google-genai
+langchain
+langchain-google-genai
+langgraph
+langgraph-checkpoint
+requests
