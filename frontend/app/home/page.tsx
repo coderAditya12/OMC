@@ -1,9 +1,22 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
-import Image from "next/image";
+/**
+ * Home Page - OpenSource Compass
+ * 
+ * Dashboard page showing personalized issue recommendations
+ */
+
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+
+// Components
+import HomeNavbar from "@/components/home/HomeNavbar";
+import ProfileCard from "@/components/home/ProfileCard";
+import IssueCard from "@/components/home/IssueCard";
+import StatsGrid from "@/components/home/StatsGrid";
+import FloatingOrbs from "@/components/ui/FloatingOrbs";
 
 interface Issue {
     id: number;
@@ -32,13 +45,14 @@ export default function HomePage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Redirect if not authenticated
     useEffect(() => {
         if (status === "unauthenticated") {
             router.push("/login");
         }
     }, [status, router]);
 
-    // Fetch recommendations when session is available
+    // Fetch recommendations
     useEffect(() => {
         const fetchRecommendations = async () => {
             if (session?.accessToken && !loading && recommendations.length === 0) {
@@ -47,18 +61,14 @@ export default function HomePage() {
                 try {
                     const response = await fetch("http://localhost:8000/recommend", {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
+                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                             access_token: session.accessToken,
                             user_email: session.user?.email || null,
                         }),
                     });
 
-                    if (!response.ok) {
-                        throw new Error("Failed to fetch recommendations");
-                    }
+                    if (!response.ok) throw new Error("Failed to fetch recommendations");
 
                     const data = await response.json();
                     setRecommendations(data.recommendations || []);
@@ -70,279 +80,209 @@ export default function HomePage() {
                 }
             }
         };
-
         fetchRecommendations();
     }, [session, loading, recommendations.length]);
 
+    // Loading State
     if (status === "loading") {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-                <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="min-h-screen flex items-center justify-center bg-slate-950">
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full"
+                />
             </div>
         );
     }
 
-    if (!session) {
-        return null;
-    }
+    if (!session) return null;
 
-    const getScoreColor = (score: number) => {
-        if (score >= 70) return "from-emerald-500 to-green-500";
-        if (score >= 50) return "from-amber-500 to-orange-500";
-        return "from-blue-500 to-cyan-500";
-    };
-
-    const getScoreBg = (score: number) => {
-        if (score >= 70) return "bg-emerald-500/20 border-emerald-500/30";
-        if (score >= 50) return "bg-amber-500/20 border-amber-500/30";
-        return "bg-blue-500/20 border-blue-500/30";
-    };
+    // Stats data
+    const stats = [
+        {
+            label: "Issues Found",
+            value: recommendations.length,
+            gradient: "from-emerald-500 to-cyan-500",
+            icon: (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            )
+        },
+        {
+            label: "Top Match",
+            value: recommendations.length > 0 ? `${Math.round(recommendations[0].match_score)}%` : "0%",
+            gradient: "from-violet-500 to-purple-500",
+            icon: (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+            )
+        },
+        {
+            label: "Languages",
+            value: new Set(recommendations.map(r => r.language)).size,
+            gradient: "from-amber-500 to-orange-500",
+            icon: (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                </svg>
+            )
+        },
+        {
+            label: "Repos",
+            value: new Set(recommendations.map(r => r.repo)).size,
+            gradient: "from-pink-500 to-rose-500",
+            icon: (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+            )
+        }
+    ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="min-h-screen bg-slate-950 overflow-hidden">
+            {/* Background */}
+            <FloatingOrbs />
+
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-black/20 border-b border-white/10">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                            <span className="text-white font-bold text-xl">O</span>
-                        </div>
-                        <span className="text-white font-semibold text-xl tracking-tight">OpenSource Compass</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        {session.user?.image && (
-                            <Image
-                                src={session.user.image}
-                                alt="Profile"
-                                width={36}
-                                height={36}
-                                className="rounded-full border-2 border-purple-500/50"
-                            />
-                        )}
-                        <button
-                            onClick={() => signOut({ callbackUrl: "/" })}
-                            className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white border border-white/20 rounded-full hover:bg-white/10 transition-all"
-                        >
-                            Sign Out
-                        </button>
-                    </div>
-                </div>
-            </nav>
+            <HomeNavbar
+                userImage={session.user?.image}
+                userName={session.user?.name}
+            />
 
             {/* Main Content */}
-            <main className="pt-24 pb-12 px-6">
-                {/* Background Effects */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-violet-600/15 rounded-full blur-3xl"></div>
-                </div>
-
-                <div className="max-w-6xl mx-auto relative z-10">
-                    {/* Welcome Section */}
-                    <div className="mb-8">
+            <main className="pt-24 pb-12 px-6 relative z-10">
+                <div className="max-w-6xl mx-auto">
+                    {/* Welcome Header */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-8"
+                    >
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
                             Welcome back,{" "}
-                            <span className="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-                                {session.user?.name?.split(" ")[0] || "User"}
+                            <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                                {session.user?.name?.split(" ")[0] || "Developer"}
                             </span>
-                            !
+                            ! 👋
                         </h1>
                         <p className="text-lg text-white/60">
-                            Find your perfect open source contribution matching your skills
+                            Here are your personalized open source recommendations
                         </p>
-                    </div>
+                    </motion.div>
 
-                    {/* Profile Summary Card */}
+                    {/* Profile Card */}
                     {profile && (
-                        <div className="mb-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                            <div className="flex flex-wrap items-center gap-4">
-                                {session.user?.image && (
-                                    <Image
-                                        src={session.user.image}
-                                        alt="Profile"
-                                        width={60}
-                                        height={60}
-                                        className="rounded-full border-2 border-purple-500/50"
-                                    />
-                                )}
-                                <div className="flex-1">
-                                    <h3 className="text-xl font-semibold text-white">@{profile.username}</h3>
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        <span className="px-3 py-1 bg-violet-500/20 border border-violet-500/30 rounded-full text-violet-300 text-sm">
-                                            {profile.primary_language}
-                                        </span>
-                                        <span className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-300 text-sm capitalize">
-                                            {profile.experience_level}
-                                        </span>
-                                        {profile.interests.slice(0, 3).map((interest) => (
-                                            <span
-                                                key={interest}
-                                                className="px-3 py-1 bg-white/10 border border-white/20 rounded-full text-white/70 text-sm"
-                                            >
-                                                {interest}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="mb-8">
+                            <ProfileCard
+                                username={profile.username}
+                                primaryLanguage={profile.primary_language}
+                                experienceLevel={profile.experience_level}
+                                interests={profile.interests}
+                                userImage={session.user?.image}
+                            />
                         </div>
                     )}
 
+                    {/* Stats Grid */}
+                    <div className="mb-8">
+                        <StatsGrid stats={stats} />
+                    </div>
+
                     {/* Recommendations Section */}
-                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-3xl p-8"
+                    >
+                        {/* Section Header */}
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                                <span className="text-3xl">🎯</span>
-                                Recommended Issues For You
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                Recommended Issues
                             </h2>
-                            <button
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
                                 onClick={() => {
                                     setRecommendations([]);
                                     setLoading(false);
                                 }}
-                                className="px-4 py-2 text-sm font-medium text-purple-300 hover:text-white border border-purple-500/30 rounded-lg hover:bg-purple-500/20 transition-all"
+                                className="px-4 py-2 text-sm font-medium text-emerald-300 hover:text-white border border-emerald-500/30 rounded-xl hover:bg-emerald-500/20 transition-all flex items-center gap-2"
                             >
-                                🔄 Refresh
-                            </button>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Refresh
+                            </motion.button>
                         </div>
 
                         {/* Loading State */}
                         {loading && (
-                            <div className="flex flex-col items-center justify-center py-16">
-                                <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                                <p className="text-white/60">Analyzing your profile and finding matches...</p>
-                                <p className="text-white/40 text-sm mt-2">This may take a few seconds</p>
+                            <div className="flex flex-col items-center justify-center py-20">
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                                >
+                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-xl shadow-emerald-500/25">
+                                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                </motion.div>
+                                <p className="text-white/60 mt-6 text-lg">Analyzing your profile...</p>
+                                <p className="text-white/40 text-sm mt-2">Finding the best matches for you</p>
                             </div>
                         )}
 
                         {/* Error State */}
                         {error && (
-                            <div className="text-center py-12">
-                                <div className="text-5xl mb-4">😕</div>
-                                <p className="text-red-400 mb-2">{error}</p>
+                            <div className="text-center py-16">
+                                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-500/20 flex items-center justify-center">
+                                    <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <p className="text-red-400 text-lg mb-2">{error}</p>
                                 <button
-                                    onClick={() => {
-                                        setError(null);
-                                        setRecommendations([]);
-                                    }}
-                                    className="text-purple-400 hover:text-purple-300"
+                                    onClick={() => { setError(null); setRecommendations([]); }}
+                                    className="text-emerald-400 hover:text-emerald-300 font-medium"
                                 >
                                     Try again
                                 </button>
                             </div>
                         )}
 
-                        {/* Recommendations List */}
+                        {/* Issues List */}
                         {!loading && !error && recommendations.length > 0 && (
                             <div className="space-y-4">
                                 {recommendations.map((issue, index) => (
-                                    <div
-                                        key={issue.id || index}
-                                        className="p-5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all"
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            {/* Match Score Badge */}
-                                            <div className={`flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br ${getScoreColor(issue.match_score)} flex flex-col items-center justify-center shadow-lg`}>
-                                                <span className="text-white font-bold text-lg">{Math.round(issue.match_score)}%</span>
-                                                <span className="text-white/80 text-xs">match</span>
-                                            </div>
-
-                                            {/* Issue Details */}
-                                            <div className="flex-1 min-w-0">
-                                                <a
-                                                    href={issue.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-lg font-semibold text-white hover:text-purple-300 transition-colors line-clamp-2 mb-2 block"
-                                                >
-                                                    {issue.title}
-                                                </a>
-
-                                                <div className="flex flex-wrap items-center gap-2 mb-3">
-                                                    <span className="text-white/50 text-sm">📦 {issue.repo}</span>
-                                                    {issue.language && (
-                                                        <span className="px-2 py-0.5 bg-violet-500/20 border border-violet-500/30 rounded text-violet-300 text-xs">
-                                                            {issue.language}
-                                                        </span>
-                                                    )}
-                                                    {issue.comments === 0 && (
-                                                        <span className="px-2 py-0.5 bg-green-500/20 border border-green-500/30 rounded text-green-300 text-xs">
-                                                            🔥 Fresh
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                {/* Labels */}
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {issue.labels.slice(0, 4).map((label) => (
-                                                        <span
-                                                            key={label}
-                                                            className="px-2 py-0.5 bg-white/10 rounded text-white/60 text-xs"
-                                                        >
-                                                            {label}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* Ask AI Button */}
-                                            <button
-                                                onClick={() => {
-                                                    const params = new URLSearchParams({
-                                                        title: issue.title,
-                                                        body: issue.body || "",
-                                                        labels: issue.labels.join(","),
-                                                        repo: issue.repo,
-                                                        url: issue.url
-                                                    });
-                                                    router.push(`/chat?${params.toString()}`);
-                                                }}
-                                                className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 rounded-lg text-white font-medium text-sm transition-all flex items-center gap-2 shadow-lg shadow-purple-500/20"
-                                            >
-                                                <span>🤖</span>
-                                                <span>Ask AI</span>
-                                            </button>
-                                        </div>
-                                    </div>
+                                    <IssueCard key={issue.id || index} issue={issue} index={index} />
                                 ))}
                             </div>
                         )}
 
                         {/* Empty State */}
                         {!loading && !error && recommendations.length === 0 && (
-                            <div className="text-center py-12">
-                                <div className="text-5xl mb-4">🔍</div>
-                                <p className="text-white/60">No recommendations yet</p>
-                                <p className="text-white/40 text-sm">We&apos;ll analyze your profile and find matching issues</p>
+                            <div className="text-center py-16">
+                                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/10 flex items-center justify-center">
+                                    <svg className="w-8 h-8 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <p className="text-white/60 text-lg">No recommendations yet</p>
+                                <p className="text-white/40 text-sm mt-2">We&apos;ll analyze your profile and find matching issues</p>
                             </div>
                         )}
-                    </div>
-
-                    {/* Stats Section */}
-                    <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-center">
-                            <div className="text-3xl font-bold text-white">{recommendations.length}</div>
-                            <div className="text-white/60 text-sm">Issues Found</div>
-                        </div>
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-center">
-                            <div className="text-3xl font-bold text-white">
-                                {recommendations.length > 0 ? Math.round(recommendations[0].match_score) : 0}%
-                            </div>
-                            <div className="text-white/60 text-sm">Top Match</div>
-                        </div>
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-center">
-                            <div className="text-3xl font-bold text-white">
-                                {new Set(recommendations.map(r => r.language)).size}
-                            </div>
-                            <div className="text-white/60 text-sm">Languages</div>
-                        </div>
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-center">
-                            <div className="text-3xl font-bold text-white">
-                                {new Set(recommendations.map(r => r.repo)).size}
-                            </div>
-                            <div className="text-white/60 text-sm">Repos</div>
-                        </div>
-                    </div>
+                    </motion.div>
                 </div>
             </main>
         </div>

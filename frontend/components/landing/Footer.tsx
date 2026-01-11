@@ -73,7 +73,7 @@ export default function Footer() {
 
                             {/* GitHub */}
                             <a
-                                href="https://github.com"
+                                href="https://github.com/coderAditya12"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-emerald-500/50 transition-all"
@@ -85,7 +85,7 @@ export default function Footer() {
 
                             {/* LinkedIn */}
                             <a
-                                href="https://linkedin.com"
+                                href="https://www.linkedin.com/in/aditya-gupta-402ba4290/"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-emerald-500/50 transition-all"
