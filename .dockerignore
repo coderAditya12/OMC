@@ -1,0 +1,18 @@
+# Git
+.git
+
+# Frontend build artifacts
+frontend/node_modules
+frontend/.next
+
+# Python
+__pycache__
+*.pyc
+.venv
+venv
+
+# Env & secrets
+.env
+
+# Docker volumes
+postgres_data
