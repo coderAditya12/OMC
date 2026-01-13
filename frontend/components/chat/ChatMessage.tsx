@@ -4,6 +4,7 @@
  * ChatMessage Component - ChatGPT Style
  * 
  * Clean, centered messages with avatar icons like ChatGPT
+ * Better file tree and code block styling
  */
 
 import ReactMarkdown from "react-markdown";
@@ -26,8 +27,8 @@ export default function ChatMessage({ role, content }: ChatMessageProps) {
             <div className="max-w-3xl mx-auto px-4 flex gap-4">
                 {/* Avatar */}
                 <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${isUser
-                        ? "bg-gradient-to-br from-violet-500 to-purple-600"
-                        : "bg-gradient-to-br from-emerald-500 to-cyan-500"
+                    ? "bg-gradient-to-br from-violet-500 to-purple-600"
+                    : "bg-gradient-to-br from-emerald-500 to-cyan-500"
                     }`}>
                     {isUser ? (
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,7 +40,7 @@ export default function ChatMessage({ role, content }: ChatMessageProps) {
                 </div>
 
                 {/* Message Content */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
                     {/* Role Label */}
                     <div className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-2">
                         {isUser ? "You" : "Compass AI"}
@@ -55,58 +56,66 @@ export default function ChatMessage({ role, content }: ChatMessageProps) {
                             <ReactMarkdown
                                 components={{
                                     pre: ({ children }) => (
-                                        <pre className="bg-slate-800/80 border border-white/10 p-4 rounded-xl overflow-x-auto text-sm my-4">
-                                            {children}
-                                        </pre>
+                                        <div className="relative my-4">
+                                            <pre className="bg-slate-900 border border-slate-700 p-4 rounded-xl overflow-x-auto text-sm">
+                                                {children}
+                                            </pre>
+                                        </div>
                                     ),
                                     code: ({ className, children }) => {
                                         const isBlock = className?.includes("language-");
                                         if (isBlock) {
-                                            return <code className="text-emerald-300">{children}</code>;
+                                            return (
+                                                <code className="text-emerald-300 font-mono text-[13px] leading-relaxed">
+                                                    {children}
+                                                </code>
+                                            );
                                         }
                                         return (
-                                            <code className="bg-white/10 px-1.5 py-0.5 rounded text-emerald-300 text-sm">
+                                            <code className="bg-slate-800 border border-slate-600 px-1.5 py-0.5 rounded text-cyan-300 text-sm font-mono">
                                                 {children}
                                             </code>
                                         );
                                     },
                                     ul: ({ children }) => (
-                                        <ul className="list-none space-y-2 my-4">
+                                        <ul className="list-none space-y-1.5 my-3">
                                             {children}
                                         </ul>
                                     ),
                                     li: ({ children }) => (
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-emerald-400 mt-1.5">•</span>
-                                            <span>{children}</span>
+                                        <li className="flex items-start gap-2 text-white/80">
+                                            <span className="text-emerald-400 mt-0.5">▸</span>
+                                            <span className="flex-1">{children}</span>
                                         </li>
                                     ),
                                     ol: ({ children }) => (
                                         <ol className="list-decimal list-inside space-y-2 my-4">{children}</ol>
                                     ),
                                     h1: ({ children }) => (
-                                        <h1 className="text-xl font-bold text-white mt-6 mb-3 pb-2 border-b border-white/10">
+                                        <h1 className="text-xl font-bold text-white mt-6 mb-3 pb-2 border-b border-emerald-500/30 flex items-center gap-2">
+                                            <span className="text-emerald-400">▎</span>
                                             {children}
                                         </h1>
                                     ),
                                     h2: ({ children }) => (
-                                        <h2 className="text-lg font-bold text-white mt-5 mb-2">
+                                        <h2 className="text-lg font-bold text-white mt-5 mb-2 flex items-center gap-2">
+                                            <span className="text-emerald-400 text-sm">●</span>
                                             {children}
                                         </h2>
                                     ),
                                     h3: ({ children }) => (
-                                        <h3 className="text-base font-semibold text-white mt-4 mb-2">
+                                        <h3 className="text-base font-semibold text-white mt-4 mb-2 text-emerald-100">
                                             {children}
                                         </h3>
                                     ),
                                     p: ({ children }) => (
-                                        <p className="my-3 leading-relaxed">{children}</p>
+                                        <p className="my-3 leading-relaxed text-white/85">{children}</p>
                                     ),
                                     strong: ({ children }) => (
                                         <strong className="font-semibold text-white">{children}</strong>
                                     ),
                                     blockquote: ({ children }) => (
-                                        <blockquote className="border-l-4 border-emerald-500/50 pl-4 my-4 italic text-white/70">
+                                        <blockquote className="border-l-4 border-emerald-500/50 pl-4 my-4 bg-emerald-500/5 py-2 rounded-r-lg italic text-white/70">
                                             {children}
                                         </blockquote>
                                     ),
@@ -119,6 +128,24 @@ export default function ChatMessage({ role, content }: ChatMessageProps) {
                                         >
                                             {children}
                                         </a>
+                                    ),
+                                    // Style tables for file trees
+                                    table: ({ children }) => (
+                                        <div className="my-4 overflow-x-auto custom-scrollbar">
+                                            <table className="min-w-full text-sm">
+                                                {children}
+                                            </table>
+                                        </div>
+                                    ),
+                                    th: ({ children }) => (
+                                        <th className="text-left text-emerald-400 font-semibold pb-2 border-b border-white/10">
+                                            {children}
+                                        </th>
+                                    ),
+                                    td: ({ children }) => (
+                                        <td className="py-1 pr-4 text-white/70 font-mono text-xs">
+                                            {children}
+                                        </td>
                                     ),
                                 }}
                             >
