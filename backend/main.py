@@ -17,7 +17,7 @@ app = FastAPI(title="OpenSource Compass API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000","https://opensource-compass.vercel.app/"],
     allow_methods=["*"],
     allow_credentials=True,
     allow_headers=["*"],
