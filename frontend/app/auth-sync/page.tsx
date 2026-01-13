@@ -25,7 +25,7 @@ export default function AuthSyncPage() {
 
                 try {
                     // Send auth data to FastAPI backend
-                    await axios.post("http://localhost:8000/auth/github", {
+                    await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/github`, {
                         id: session.user?.id || "",
                         name: session.user?.name,
                         email: session.user?.email,

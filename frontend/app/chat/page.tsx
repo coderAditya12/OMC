@@ -105,7 +105,7 @@ function ChatContent() {
     const loadPreviousSessions = async () => {
         try {
             const userId = session?.user?.email || "anonymous";
-            const response = await fetch(`http://localhost:8000/chat/sessions/${userId}`);
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat/sessions/${userId}`);
             const data = await response.json();
             if (data.status === "success") {
                 setPreviousSessions(data.sessions);
@@ -118,7 +118,7 @@ function ChatContent() {
     const loadChatHistory = async (sessionIdToLoad: string) => {
         try {
             setLoading(true);
-            const response = await fetch(`http://localhost:8000/chat/history/${sessionIdToLoad}`);
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat/history/${sessionIdToLoad}`);
             const data = await response.json();
 
             if (data.status === "success") {
@@ -158,7 +158,7 @@ function ChatContent() {
 
         try {
             const store = useChatStore.getState();
-            const response = await fetch("http://localhost:8000/chat", {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
