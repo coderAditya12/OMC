@@ -53,37 +53,58 @@ def get_repos(access_token: str, per_page: int = 100) -> list:
 
 
 def search_repos(language: str, per_page: int = 10, access_token: str = None) -> list:
-    """Search repos with good-first-issues by language"""
-    query = f"good-first-issues in:topics language:{language} stars:>100"
-    headers = get_headers(access_token) if access_token else {}
+    """Search repos with good-first-issues by language.
+    Uses server token if user token fails (rate limit).
+    """
+    import os
+    from time import sleep
     
-    try:
-        response = requests.get(
-            f"{GITHUB_URL}/search/repositories",
-            headers=headers,
-            params={
-                "q": query,
-                "sort": "stars",
-                "order": "desc",
-                "per_page": per_page
-            }
-        )
-        response.raise_for_status()
-        data = response.json()
+    query = f"good-first-issues in:topics language:{language} stars:>100"
+    
+    # Try with user token first, fallback to server token
+    tokens_to_try = [access_token, os.getenv("GITHUB_ACCESS_TOKEN")]
+    tokens_to_try = [t for t in tokens_to_try if t]  # Filter None
+    
+    for token in tokens_to_try:
+        headers = get_headers(token) if token else {}
         
-        return [
-            {
-                "full_name": repo.get("full_name"),
-                "description": repo.get("description"),
-                "stars": repo.get("stargazers_count"),
-                "language": repo.get("language"),
-                "url": repo.get("html_url")
-            }
-            for repo in data.get("items", [])
-        ]
-    except Exception as e:
-        print(f"Error searching repos: {e}")
-        return []
+        try:
+            response = requests.get(
+                f"{GITHUB_URL}/search/repositories",
+                headers=headers,
+                params={
+                    "q": query,
+                    "sort": "stars",
+                    "order": "desc",
+                    "per_page": per_page
+                }
+            )
+            
+            # If rate limited, try next token
+            if response.status_code == 403:
+                print(f"Rate limited, trying next token...")
+                sleep(1)
+                continue
+                
+            response.raise_for_status()
+            data = response.json()
+            
+            return [
+                {
+                    "full_name": repo.get("full_name"),
+                    "description": repo.get("description"),
+                    "stars": repo.get("stargazers_count"),
+                    "language": repo.get("language"),
+                    "url": repo.get("html_url")
+                }
+                for repo in data.get("items", [])
+            ]
+        except Exception as e:
+            print(f"Error searching repos with token: {e}")
+            continue
+    
+    print(f"All tokens exhausted for search: {language}")
+    return []
 
 
 def get_issues(repo_full_name: str, per_page: int = 5, access_token: str = None) -> list:
