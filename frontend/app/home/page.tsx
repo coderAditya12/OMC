@@ -9,6 +9,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { motion } from "framer-motion";
 
 // Components
@@ -59,22 +60,19 @@ export default function HomePage() {
                 setLoading(true);
                 setError(null);
                 try {
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/recommend`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            access_token: session.accessToken,
-                            user_email: session.user?.email || null,
-                        }),
+                    const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/recommend`, {
+                        access_token: session.accessToken,
+                        user_email: session.user?.email || null,
                     });
 
-                    if (!response.ok) throw new Error("Failed to fetch recommendations");
-
-                    const data = await response.json();
-                    setRecommendations(data.recommendations || []);
-                    setProfile(data.profile || null);
+                    setRecommendations(response.data.recommendations || []);
+                    setProfile(response.data.profile || null);
                 } catch (err) {
-                    setError(err instanceof Error ? err.message : "Something went wrong");
+                    if (axios.isAxiosError(err)) {
+                        setError(err.response?.data?.message || err.message || "Something went wrong");
+                    } else {
+                        setError(err instanceof Error ? err.message : "Something went wrong");
+                    }
                 } finally {
                     setLoading(false);
                 }
