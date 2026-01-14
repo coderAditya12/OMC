@@ -6,11 +6,9 @@ from fastapi import FastAPI, HTTPException, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-import uuid
-
 from backend.services import github, profile, matcher, agent, chat_db
 from db.database import get_db
-
+from backend.routers import auth
 
 # Initialize FastAPI
 app = FastAPI(title="OpenSource Compass API")
@@ -60,44 +58,45 @@ class ChatRequest(BaseModel):
 def health():
     return {"status": "healthy"}
 
+app.include_router(auth.router)
 
-@app.post("/auth/github")
-def auth_github(data: AuthRequest, db: Session = Depends(get_db)):
-    """
-    Handle GitHub OAuth callback.
-    Saves user info (email, name, image) to database.
-    """
-    # Import User model
-    from db.models.usermodel import User
+# @app.post("/auth/github")
+# def auth_github(data: AuthRequest, db: Session = Depends(get_db)):
+#     """
+#     Handle GitHub OAuth callback.
+#     Saves user info (email, name, image) to database.
+#     """
+#     # Import User model
+#     from db.models.usermodel import User
     
-    # Only save if we have an email
-    if data.email:
-        # Check if user already exists
-        existing_user = db.query(User).filter(User.email == data.email).first()
+#     # Only save if we have an email
+#     if data.email:
+#         # Check if user already exists
+#         existing_user = db.query(User).filter(User.email == data.email).first()
         
-        if existing_user:
-            # Update existing user
-            existing_user.name = data.name
-            existing_user.image = data.image
-        else:
-            # Create new user
-            new_user = User(
-                email=data.email,
-                name=data.name,
-                image=data.image
-            )
-            db.add(new_user)
+#         if existing_user:
+#             # Update existing user
+#             existing_user.name = data.name
+#             existing_user.image = data.image
+#         else:
+#             # Create new user
+#             new_user = User(
+#                 email=data.email,
+#                 name=data.name,
+#                 image=data.image
+#             )
+#             db.add(new_user)
         
-        db.commit()
+#         db.commit()
     
-    return {
-        "status": "success",
-        "user": {
-            "email": data.email,
-            "name": data.name,
-            "image": data.image
-        }
-    }
+#     return {
+#         "status": "success",
+#         "user": {
+#             "email": data.email,
+#             "name": data.name,
+#             "image": data.image
+#         }
+#     }
 
 
 @app.post("/recommend")
