@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: Ping backend
         run: |
-          curl -s https://opensource-compass.onrender.com/healthz > /dev/null
+          curl -s https://opensource-compass.onrender.com/ > /dev/null
