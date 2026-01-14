@@ -1,31 +1,17 @@
 """
-OpenSource Compass - Backend API
-Clean, modular FastAPI server
+Chat Router - Handles AI chat interactions and chat history
 """
-from fastapi import FastAPI, HTTPException, Response, Depends
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from backend.services import github, profile, matcher, agent, chat_db
+
+from backend.services import agent, chat_db
 from db.database import get_db
-from backend.routers import auth
-from backend.routers import recommend
 
-# Initialize FastAPI
-app = FastAPI(title="OpenSource Compass API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000","https://opensource-compass.vercel.app"],
-    allow_methods=["*"],
-    allow_credentials=False,
-    allow_headers=["*"],
-)
-
+router = APIRouter()
 
 # In-memory session storage (will move to PostgreSQL)
 _sessions = {}
-
 
 
 class ChatRequest(BaseModel):
@@ -41,16 +27,7 @@ class ChatRequest(BaseModel):
     system_prompt: str | None = None
 
 
-# Routes
-@app.get("/")
-def health():
-    return {"status": "healthy"}
-
-app.include_router(auth.router)
-app.include_router(recommend.router)
-
-
-@app.post("/chat")
+@router.post("/chat")
 def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
     """
     Chat with AI agent about a specific issue.
@@ -122,24 +99,23 @@ def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
 # GET Routes for Chat History
 # ==========================================
 
-@app.get("/chat/history/{session_id}")
+@router.get("/chat/history/{session_id}")
 def get_chat_history(session_id: str, db: Session = Depends(get_db)):
     """
     Get all messages for a specific chat session.
     
     This is used to load previous messages when the user returns to a chat.
     """
-    # Step 1: Get the session from database
+    # Get the session from database
     session = chat_db.get_session(db, session_id)
     
-    # Step 2: Check if session exists
     if not session:
         raise HTTPException(status_code=404, detail="Chat session not found")
     
-    # Step 3: Get all messages for this session
+    # Get all messages for this session
     messages = chat_db.get_session_messages(db, session_id)
     
-    # Step 4: Convert messages to a simple list format
+    # Convert messages to a simple list format
     message_list = []
     for msg in messages:
         message_list.append({
@@ -148,7 +124,6 @@ def get_chat_history(session_id: str, db: Session = Depends(get_db)):
             "created_at": msg.created_at.isoformat()
         })
     
-    # Step 5: Return the response
     return {
         "status": "success",
         "session_id": session_id,
@@ -158,21 +133,21 @@ def get_chat_history(session_id: str, db: Session = Depends(get_db)):
     }
 
 
-@app.get("/chat/sessions/{user_id}")
+@router.get("/chat/sessions/{user_id}")
 def get_user_sessions(user_id: str, db: Session = Depends(get_db)):
     """
     Get all chat sessions for a specific user.
     
     This is used to show a list of previous conversations in the sidebar.
     """
-    # Step 1: Query all sessions for this user
+    # Query all sessions for this user
     sessions = db.query(chat_db.ChatSession).filter(
         chat_db.ChatSession.user_id == user_id
     ).order_by(
         chat_db.ChatSession.created_at.desc()
     ).all()
     
-    # Step 2: Convert sessions to a simple list format
+    # Convert sessions to a simple list format
     session_list = []
     for session in sessions:
         session_list.append({
@@ -182,14 +157,8 @@ def get_user_sessions(user_id: str, db: Session = Depends(get_db)):
             "created_at": session.created_at.isoformat()
         })
     
-    # Step 3: Return the response
     return {
         "status": "success",
         "user_id": user_id,
         "sessions": session_list
     }
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="localhost", port=8000)
