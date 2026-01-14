@@ -31,7 +31,7 @@ export default function AuthSyncPage() {
                         email: session.user?.email,
                         image: session.user?.image,
                         accessToken: session.accessToken,
-                    }, { withCredentials: true });
+                    });
 
                     console.log("Auth sync successful");
                 } catch (error) {
