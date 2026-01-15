@@ -25,16 +25,10 @@ app.add_middleware(
 # In-memory session storage (will move to PostgreSQL)
 _sessions = {}
 
-
-
-
-
-
 # Routes
 @app.get("/")
 def health():
     return {"status": "healthy"}
-
 app.include_router(auth.router)
 app.include_router(recommend.router)
 app.include_router(chat.router)

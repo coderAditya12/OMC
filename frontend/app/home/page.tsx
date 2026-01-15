@@ -8,7 +8,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 
@@ -53,10 +53,13 @@ export default function HomePage() {
         }
     }, [status, router]);
 
-    // Fetch recommendations
+    // Fetch recommendations - only once when session is ready
+    const hasFetched = useRef(false);
+
     useEffect(() => {
         const fetchRecommendations = async () => {
-            if (session?.accessToken && !loading && recommendations.length === 0) {
+            if (session?.accessToken && !hasFetched.current) {
+                hasFetched.current = true;
                 setLoading(true);
                 setError(null);
                 try {
@@ -79,7 +82,7 @@ export default function HomePage() {
             }
         };
         fetchRecommendations();
-    }, [session, loading, recommendations.length]);
+    }, [session]);
 
     // Loading State
     if (status === "loading") {
