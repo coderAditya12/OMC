@@ -11,16 +11,22 @@ router = APIRouter()
 @router.post("/recommend")
 def get_recommendations(request:RecommendRequest,db:Session=Depends(get_db)):
     "get issue recommendationos based on user's GitHub profile."
-    print("request body",request)
+    print("[DEBUG] Request body:", request)
     token = request.access_token
+    print(f"[DEBUG] Token received: {token[:15]}..." if token else "[DEBUG] No token!")
+    
     user = get_user(token)
+    print(f"[DEBUG] User from GitHub: {user}")
     if not user:
-        raise HTTPException(status_code=400, detail="failed to fetch user")
+        raise HTTPException(status_code=400, detail="failed to fetch user from GitHub")
+    
     username = user["username"]
     get_user_repos = get_repos(token)
+    print(f"[DEBUG] Repos count: {len(get_user_repos) if get_user_repos else 0}")
+    
     user_repos = filter_repos(get_user_repos,username)
     if not user_repos:
-        raise HTTPException(status_code=400, detail="no repos found")
+        raise HTTPException(status_code=400, detail="no repos found for user")
     
     user_profile = create_profile(user_repos,username)
 
