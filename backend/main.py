@@ -8,8 +8,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from backend.services import github, profile, matcher, agent, chat_db
 from db.database import get_db
-from backend.routers import auth
-from backend.routers import recommend
+from backend.routers import auth,recommend,chat,chathistory
+
 
 # Initialize FastAPI
 app = FastAPI(title="OpenSource Compass API")
@@ -28,17 +28,7 @@ _sessions = {}
 
 
 
-class ChatRequest(BaseModel):
-    access_token: str
-    user_email: str  # User's email for session tracking
-    session_id: str | None = None
-    repo_name: str
-    issue_url: str  # Full URL to the issue
-    issue_title: str
-    issue_body: str
-    issue_labels: list[str] = []
-    message: str
-    system_prompt: str | None = None
+
 
 
 # Routes
@@ -48,114 +38,115 @@ def health():
 
 app.include_router(auth.router)
 app.include_router(recommend.router)
+app.include_router(chat.router)
+app.include_router(chathistory.router)
 
-
-@app.post("/chat")
-def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
-    """
-    Chat with AI agent about a specific issue.
-    Stores chat history in PostgreSQL.
-    """
-    issue = {
-        "title": request.issue_title,
-        "body": request.issue_body,
-        "labels": request.issue_labels
-    }
+# @app.post("/chat")
+# def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
+#     """
+#     Chat with AI agent about a specific issue.
+#     Stores chat history in PostgreSQL.
+#     """
+#     issue = {
+#         "title": request.issue_title,
+#         "body": request.issue_body,
+#         "labels": request.issue_labels
+#     }
     
-    try:
-        # Get or create chat session in database
-        chat_session, is_new = chat_db.get_or_create_session(
-            db=db,
-            session_id=request.session_id,
-            user_id=request.user_email,  # Using email as user identifier
-            issue_url=request.issue_url,
-            repo_name=request.repo_name,
-            issue_title=request.issue_title
-        )
-        session_id = chat_session.id
+#     try:
+#         # Get or create chat session in database
+#         chat_session, is_new = chat_db.get_or_create_session(
+#             db=db,
+#             session_id=request.session_id,
+#             user_id=request.user_email,  # Using email as user identifier
+#             issue_url=request.issue_url,
+#             repo_name=request.repo_name,
+#             issue_title=request.issue_title
+#         )
+#         session_id = chat_session.id
         
-        # Check for existing agent in memory cache
-        if session_id in _sessions:
-            compiled_agent, state = _sessions[session_id]
-        else:
-            # Create new agent
-            compiled_agent, state = agent.create_agent(
-                issue=issue,
-                repo_name=request.repo_name,
-                access_token=request.access_token,
-                system_prompt=request.system_prompt
-            )
+#         # Check for existing agent in memory cache
+#         if session_id in _sessions:
+#             compiled_agent, state = _sessions[session_id]
+#         else:
+#             # Create new agent
+#             compiled_agent, state = agent.create_agent(
+#                 issue=issue,
+#                 repo_name=request.repo_name,
+#                 access_token=request.access_token,
+#                 system_prompt=request.system_prompt
+#             )
             
-            # If session exists in DB but not memory, load previous messages
-            if not is_new:
-                db_messages = chat_db.get_session_messages(db, session_id)
-                # Messages are loaded into agent context on first response
+#             # If session exists in DB but not memory, load previous messages
+#             if not is_new:
+#                 db_messages = chat_db.get_session_messages(db, session_id)
+#                 # Messages are loaded into agent context on first response
         
-        # Save user message to database
-        chat_db.save_message(db, session_id, "user", request.message)
+#         # Save user message to database
+#         chat_db.save_message(db, session_id, "user", request.message)
         
-        # Chat with agent
-        response, updated_messages = agent.chat(
-            agent=compiled_agent,
-            state=state,
-            user_message=request.message
-        )
+#         # Chat with agent
+#         response, updated_messages = agent.chat(
+#             agent=compiled_agent,
+#             state=state,
+#             user_message=request.message
+#         )
         
-        # Save AI response to database
-        chat_db.save_message(db, session_id, "assistant", response)
+#         # Save AI response to database
+#         chat_db.save_message(db, session_id, "assistant", response)
         
-        # Update session state in memory cache
-        state["messages"] = updated_messages
-        _sessions[session_id] = (compiled_agent, state)
+#         # Update session state in memory cache
+#         state["messages"] = updated_messages
+#         _sessions[session_id] = (compiled_agent, state)
         
-        return {
-            "status": "success",
-            "session_id": session_id,
-            "response": response
-        }
+#         return {
+#             "status": "success",
+#             "session_id": session_id,
+#             "response": response
+#         }
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
 # ==========================================
 # GET Routes for Chat History
 # ==========================================
 
-@app.get("/chat/history/{session_id}")
-def get_chat_history(session_id: str, db: Session = Depends(get_db)):
-    """
-    Get all messages for a specific chat session.
+# @app.get("/chat/history/{session_id}")
+# def get_chat_history(session_id: str, db: Session = Depends(get_db)):
+#     """
+#     Get all messages for a specific chat session.
     
-    This is used to load previous messages when the user returns to a chat.
-    """
-    # Step 1: Get the session from database
-    session = chat_db.get_session(db, session_id)
+#     This is used to load previous messages when the user returns to a chat.
+#     """
+#     # Step 1: Get the session from database
+#     session = chat_db.get_session(db, session_id)
     
-    # Step 2: Check if session exists
-    if not session:
-        raise HTTPException(status_code=404, detail="Chat session not found")
+#     # Step 2: Check if session exists
+#     if not session:
+#         raise HTTPException(status_code=404, detail="Chat session not found")
     
-    # Step 3: Get all messages for this session
-    messages = chat_db.get_session_messages(db, session_id)
+#     # Step 3: Get all messages for this session
+#     messages = chat_db.get_session_messages(db, session_id)
     
-    # Step 4: Convert messages to a simple list format
-    message_list = []
-    for msg in messages:
-        message_list.append({
-            "role": msg.role,
-            "content": msg.content,
-            "created_at": msg.created_at.isoformat()
-        })
+#     # Step 4: Convert messages to a simple list format
+#     message_list = []
+#     for msg in messages:
+#         message_list.append({
+#             "role": msg.role,
+#             "content": msg.content,
+#             "created_at": msg.created_at.isoformat()
+#         })
     
-    # Step 5: Return the response
-    return {
-        "status": "success",
-        "session_id": session_id,
-        "issue_title": session.issue_title,
-        "repo_name": session.repo_name,
-        "messages": message_list
-    }
+#     # Step 5: Return the response
+#     return {
+#         "status": "success",
+#         "session_id": session_id,
+#         "issue_title": session.issue_title,
+#         "repo_name": session.repo_name,
+#         "messages": message_list
+#     }
 
 
 @app.get("/chat/sessions/{user_id}")
