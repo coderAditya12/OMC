@@ -8,7 +8,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 
@@ -45,6 +45,7 @@ export default function HomePage() {
     const [profile, setProfile] = useState<ProfileSummary | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [hasFetched, setHasFetched] = useState(false); // Use state instead of ref
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -54,40 +55,39 @@ export default function HomePage() {
     }, [status, router]);
 
     // Fetch recommendations - only once when session is ready
-    const hasFetched = useRef(false);
-
     useEffect(() => {
+        // Skip if already fetched, currently loading, or no session
+        if (hasFetched || loading || !session?.accessToken || status !== "authenticated") {
+            return;
+        }
+
         const fetchRecommendations = async () => {
-            // Debug: Log session state
-            console.log("[DEBUG] Session:", session);
-            console.log("[DEBUG] AccessToken:", session?.accessToken);
+            setHasFetched(true); // Mark as fetched BEFORE making request
+            setLoading(true);
+            setError(null);
 
-            if (session?.accessToken && !hasFetched.current) {
-                hasFetched.current = true;
-                setLoading(true);
-                setError(null);
-                try {
-                    console.log("[DEBUG] Making request with token:", session.accessToken.substring(0, 10) + "...");
-                    const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/recommend`, {
-                        access_token: session.accessToken,
-                        user_email: session.user?.email || null,
-                    });
+            try {
+                console.log("[DEBUG] Making single request...");
+                const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/recommend`, {
+                    access_token: session.accessToken,
+                    user_email: session.user?.email || null,
+                });
 
-                    setRecommendations(response.data.recommendations || []);
-                    setProfile(response.data.profile || null);
-                } catch (err) {
-                    if (axios.isAxiosError(err)) {
-                        setError(err.response?.data?.message || err.message || "Something went wrong");
-                    } else {
-                        setError(err instanceof Error ? err.message : "Something went wrong");
-                    }
-                } finally {
-                    setLoading(false);
+                setRecommendations(response.data.recommendations || []);
+                setProfile(response.data.profile || null);
+            } catch (err) {
+                if (axios.isAxiosError(err)) {
+                    setError(err.response?.data?.detail || err.message || "Something went wrong");
+                } else {
+                    setError(err instanceof Error ? err.message : "Something went wrong");
                 }
+            } finally {
+                setLoading(false);
             }
         };
+
         fetchRecommendations();
-    }, [session]);
+    }, [session, status, hasFetched, loading]);
 
     // Loading State
     if (status === "loading") {
