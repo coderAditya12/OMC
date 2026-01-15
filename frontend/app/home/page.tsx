@@ -58,11 +58,16 @@ export default function HomePage() {
 
     useEffect(() => {
         const fetchRecommendations = async () => {
+            // Debug: Log session state
+            console.log("[DEBUG] Session:", session);
+            console.log("[DEBUG] AccessToken:", session?.accessToken);
+
             if (session?.accessToken && !hasFetched.current) {
                 hasFetched.current = true;
                 setLoading(true);
                 setError(null);
                 try {
+                    console.log("[DEBUG] Making request with token:", session.accessToken.substring(0, 10) + "...");
                     const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/recommend`, {
                         access_token: session.accessToken,
                         user_email: session.user?.email || null,
