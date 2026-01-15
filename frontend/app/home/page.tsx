@@ -263,7 +263,7 @@ export default function HomePage() {
                         {!loading && !error && recommendations.length > 0 && (
                             <div className="space-y-4">
                                 {recommendations.map((issue, index) => (
-                                    <IssueCard key={issue.id || index} issue={issue} index={index} />
+                                    <IssueCard key={Math.random() || index} issue={issue} index={index} />
                                 ))}
                             </div>
                         )}

@@ -8,8 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from backend.services import github, profile, matcher, agent, chat_db
 from db.database import get_db
-from backend.routers import auth,recommend,chat,chathistory
-
+from backend.routers import auth,recommend,chat,chathistory,chatsessions
 
 # Initialize FastAPI
 app = FastAPI(title="OpenSource Compass API")
@@ -40,6 +39,7 @@ app.include_router(auth.router)
 app.include_router(recommend.router)
 app.include_router(chat.router)
 app.include_router(chathistory.router)
+app.include_router(chatsessions.router)
 
 # @app.post("/chat")
 # def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
@@ -149,36 +149,36 @@ app.include_router(chathistory.router)
 #     }
 
 
-@app.get("/chat/sessions/{user_id}")
-def get_user_sessions(user_id: str, db: Session = Depends(get_db)):
-    """
-    Get all chat sessions for a specific user.
+# @app.get("/chat/sessions/{user_id}")
+# def get_user_sessions(user_id: str, db: Session = Depends(get_db)):
+#     """
+#     Get all chat sessions for a specific user.
     
-    This is used to show a list of previous conversations in the sidebar.
-    """
-    # Step 1: Query all sessions for this user
-    sessions = db.query(chat_db.ChatSession).filter(
-        chat_db.ChatSession.user_id == user_id
-    ).order_by(
-        chat_db.ChatSession.created_at.desc()
-    ).all()
+#     This is used to show a list of previous conversations in the sidebar.
+#     """
+#     # Step 1: Query all sessions for this user
+#     sessions = db.query(chat_db.ChatSession).filter(
+#         chat_db.ChatSession.user_id == user_id
+#     ).order_by(
+#         chat_db.ChatSession.created_at.desc()
+#     ).all()
     
-    # Step 2: Convert sessions to a simple list format
-    session_list = []
-    for session in sessions:
-        session_list.append({
-            "session_id": session.id,
-            "issue_title": session.issue_title,
-            "repo_name": session.repo_name,
-            "created_at": session.created_at.isoformat()
-        })
+#     # Step 2: Convert sessions to a simple list format
+#     session_list = []
+#     for session in sessions:
+#         session_list.append({
+#             "session_id": session.id,
+#             "issue_title": session.issue_title,
+#             "repo_name": session.repo_name,
+#             "created_at": session.created_at.isoformat()
+#         })
     
-    # Step 3: Return the response
-    return {
-        "status": "success",
-        "user_id": user_id,
-        "sessions": session_list
-    }
+#     # Step 3: Return the response
+#     return {
+#         "status": "success",
+#         "user_id": user_id,
+#         "sessions": session_list
+#     }
 
 
 if __name__ == "__main__":

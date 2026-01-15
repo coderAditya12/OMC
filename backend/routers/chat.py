@@ -1,11 +1,11 @@
 from fastapi import APIRouter,Depends,HTTPException
-router = APIRouter()
 from backend.staticmodel.pymodel import ChatRequest
 from sqlalchemy.orm import Session
 from db.database import get_db
 from backend.services.chat_db import get_or_create_session,get_session_messages,save_message
 from backend.services.agent import chat,create_agent
-
+router = APIRouter()
+_sessions ={}
 @router.post("/chat")
 def chat_with_agent(request:ChatRequest,db:Session = Depends(get_db)):
     """
@@ -55,6 +55,7 @@ def chat_with_agent(request:ChatRequest,db:Session = Depends(get_db)):
             "response":response
         }
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500,detail=str(e))
         
                 
