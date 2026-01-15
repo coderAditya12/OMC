@@ -50,7 +50,7 @@ def get_recommendations(request:RecommendRequest,db:Session=Depends(get_db)):
             for issue in issues:
                 issue["language"]= lang
                 issue["repo_stars"]= repo_stars
-        all_Issues.extend(issues)
+            all_Issues.extend(issues)  # <-- Now inside the for repo loop
 
     chatted_issue_urls = set()
     if request.user_email:
