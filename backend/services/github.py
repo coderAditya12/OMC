@@ -2,6 +2,7 @@
 GitHub API client - handles all GitHub API calls
 """
 import requests
+from datetime import datetime, timedelta
 
 GITHUB_URL = "https://api.github.com"
 
@@ -53,8 +54,10 @@ def get_repos(access_token: str, per_page: int = 100) -> list:
 
 
 def search_repos(language: str, access_token: str = None, per_page: int = 10) -> list:
-    """Search repos with good-first-issues by language."""
-    query = f"good-first-issues in:topics language:{language} stars:>500"
+    """Search repos with good-first-issues by language. Filters out repos not updated in last 15 days."""
+    # Calculate date threshold (15 days ago)
+    date_threshold = (datetime.now() - timedelta(days=15)).strftime("%Y-%m-%d")
+    query = f"good-first-issues in:topics language:{language} stars:>500 pushed:>{date_threshold}"
     
     headers = get_headers(access_token) if access_token else {}
     
