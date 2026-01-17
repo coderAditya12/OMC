@@ -67,7 +67,6 @@ export default function HomePage() {
             setError(null);
 
             try {
-                console.log("[DEBUG] Making single request...");
                 const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/recommend`, {
                     access_token: session.accessToken,
                     user_email: session.user?.email || null,

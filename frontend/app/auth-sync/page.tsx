@@ -1,11 +1,4 @@
 "use client";
-
-/**
- * Auth Sync Page
- * 
- * Beautiful loading page shown while syncing user auth with backend
- */
-
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -31,8 +24,6 @@ export default function AuthSyncPage() {
                         image: session.user?.image,
                         accessToken: session.accessToken,
                     });
-
-                    console.log("Auth sync successful");
                 } catch (error) {
                     console.error("Error syncing auth:", error);
                 } finally {

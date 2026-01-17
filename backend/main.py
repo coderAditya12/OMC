@@ -2,12 +2,8 @@
 OpenSource Compass - Backend API
 Clean, modular FastAPI server
 """
-from fastapi import FastAPI, HTTPException, Response, Depends
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from backend.services import github, profile, matcher, agent, chat_db
-from db.database import get_db
 from backend.routers import auth,recommend,chat,chathistory,chatsessions
 
 # Initialize FastAPI
