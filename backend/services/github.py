@@ -54,7 +54,7 @@ def get_repos(access_token: str, per_page: int = 100) -> list:
 
 def search_repos(language: str, access_token: str = None, per_page: int = 10) -> list:
     """Search repos with good-first-issues by language."""
-    query = f"good-first-issues in:topics language:{language} stars:>300"
+    query = f"good-first-issues in:topics language:{language} stars:>500"
     
     headers = get_headers(access_token) if access_token else {}
     
@@ -93,42 +93,77 @@ def search_repos(language: str, access_token: str = None, per_page: int = 10) ->
         return []
 
 
-def get_issues(repo_full_name: str, per_page: int = 5, access_token: str = None) -> list:
-    """Fetch 'good first issue' labeled issues from a repo"""
+# Beginner-friendly labels to search for
+BEGINNER_LABELS = [
+    "good first issue",   
+    "first-timers-only",   
+    "beginner",           
+    "beginner-friendly",  
+    "help wanted",         
+    "up-for-grabs",        
+    "easy",                
+    "low-hanging-fruit",   
+    "documentation",       
+    "good-first-issue",
+    "tests",
+    "DX",
+    "bug"
+]
+
+
+def get_issues(repo_full_name: str, per_page: int = 5, access_token: str = None, labels: list = None) -> list:
+    """
+    Fetch issues with beginner-friendly labels from a repo.
+    Uses OR logic - fetches issues with ANY of the specified labels.
+    """
     headers = get_headers(access_token) if access_token else {}
     
-    try:
-        response = requests.get(
-            f"{GITHUB_URL}/repos/{repo_full_name}/issues",
-            headers=headers,
-            params={
-                "labels": "good first issue",
-                "state": "open",
-                "per_page": per_page,
-                "sort": "updated",
-                "direction": "desc"
-            }
-        )
-        response.raise_for_status()
-        
-        issues = []
-        for issue in response.json():
-            if "pull_request" in issue:
+    # Use provided labels or default to BEGINNER_LABELS
+    search_labels = labels if labels else BEGINNER_LABELS
+    
+    all_issues = {}  # Use dict to deduplicate by issue id
+    
+    for label in search_labels:
+        try:
+            response = requests.get(
+                f"{GITHUB_URL}/repos/{repo_full_name}/issues",
+                headers=headers,
+                params={
+                    "labels": label,
+                    "state": "open",
+                    "per_page": per_page,
+                    "sort": "updated",
+                    "direction": "desc"
+                }
+            )
+            
+            if response.status_code == 403:
+                print(f"Rate limited while fetching issues with label: {label}")
                 continue
-            issues.append({
-                "id": issue.get("id"),
-                "title": issue.get("title"),
-                "body": (issue.get("body") or "")[:500],
-                "url": issue.get("html_url"),
-                "labels": [l.get("name") for l in issue.get("labels", [])],
-                "repo": repo_full_name,
-                "created_at": issue.get("created_at"),
-                "comments": issue.get("comments", 0)
-            })
-        return issues
-    except Exception as e:
-        print(f"Error fetching issues from {repo_full_name}: {e}")
-        return []
+                
+            response.raise_for_status()
+            
+            for issue in response.json():
+                if "pull_request" in issue:
+                    continue
+                    
+                issue_id = issue.get("id")
+                if issue_id not in all_issues:
+                    all_issues[issue_id] = {
+                        "id": issue_id,
+                        "title": issue.get("title"),
+                        "body": (issue.get("body") or "")[:500],
+                        "url": issue.get("html_url"),
+                        "labels": [l.get("name") for l in issue.get("labels", [])],
+                        "repo": repo_full_name,
+                        "created_at": issue.get("created_at"),
+                        "comments": issue.get("comments", 0)
+                    }
+        except Exception as e:
+            print(f"Error fetching issues from {repo_full_name} with label {label}: {e}")
+            continue
+    
+    return list(all_issues.values())
 
 
 def get_readme(repo_full_name: str, access_token: str = None) -> str | None:

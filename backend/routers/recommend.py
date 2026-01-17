@@ -65,7 +65,7 @@ def get_recommendations(request: RecommendRequest, db: Session = Depends(get_db)
     filtered_issues = [issue for issue in all_issues if issue.get("url") not in chatted_issue_urls]
     
     # Match and rank issues
-    recommendations = match_issues(filtered_issues, user_profile, top_n=10)
+    recommendations = match_issues(filtered_issues, user_profile)
     
     return {
         "status": "success",

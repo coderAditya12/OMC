@@ -72,8 +72,8 @@ def calculate_score(issue: dict, profile: dict) -> float:
     return score
 
 
-def match_issues(issues: list, profile: dict, top_n: int = 10) -> list:
-    """Match and rank issues by score"""
+def match_issues(issues: list, profile: dict, top_n: int = None) -> list:
+    """Match and rank issues by score. Returns all issues if top_n is None."""
     scored = []
     
     for issue in issues:
@@ -83,4 +83,4 @@ def match_issues(issues: list, profile: dict, top_n: int = 10) -> list:
         scored.append(issue_copy)
     
     scored.sort(key=lambda x: x["match_score"], reverse=True)
-    return scored[:top_n]
+    return scored[:top_n] if top_n else scored
