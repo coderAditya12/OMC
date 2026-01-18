@@ -2,7 +2,7 @@ from h11._readers import Http10Reader
 from fastapi import APIRouter,Depends,HTTPException
 from db.database import get_db
 from sqlalchemy.orm import Session
-from backend.services.chat_db import ChatSession,get_session,get_session_messages
+from backend.services.chat_db import get_session,get_session_messages
 router = APIRouter()
 @router.get("/chat/history/{session_id}")
 def get_chat_history(session_id:str,db:Session = Depends(get_db)):
