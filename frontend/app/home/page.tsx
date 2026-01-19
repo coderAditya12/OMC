@@ -43,6 +43,7 @@ export default function HomePage() {
     const router = useRouter();
     const [recommendations, setRecommendations] = useState<Issue[]>([]);
     const [profile, setProfile] = useState<ProfileSummary | null>(null);
+    const [missingLanguages, setMissingLanguages] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hasFetched, setHasFetched] = useState(false); // Use state instead of ref
@@ -74,6 +75,7 @@ export default function HomePage() {
 
                 setRecommendations(response.data.recommendations || []);
                 setProfile(response.data.profile || null);
+                setMissingLanguages(response.data.missing_languages || []);
             } catch (err) {
                 if (axios.isAxiosError(err)) {
                     setError(err.response?.data?.detail || err.message || "Something went wrong");
@@ -262,6 +264,28 @@ export default function HomePage() {
                                 >
                                     Try again
                                 </button>
+                            </div>
+                        )}
+
+                        {/* Missing Languages Warning */}
+                        {!loading && !error && missingLanguages.length > 0 && profile && (
+                            <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                                <div className="flex items-start gap-3">
+                                    <svg className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    <div>
+                                        <p className="text-amber-200 font-medium">
+                                            No beginner-friendly issues found for {missingLanguages.join(", ")}
+                                        </p>
+                                        <p className="text-amber-200/70 text-sm mt-1">
+                                            {missingLanguages.includes(profile.primary_language)
+                                                ? `Showing issues from your other languages instead.`
+                                                : `These languages didn't have matching active repositories (>500 stars, updated in last 15 days).`
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         )}
 

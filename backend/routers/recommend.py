@@ -41,9 +41,11 @@ def get_recommendations(request: RecommendRequest, db: Session = Depends(get_db)
     # Search for repos with good first issues
     all_issues = []
     top_languages = languages[:3]
+    missing_languages = []  # Track languages with no issues
     
     for lang in top_languages:
         matching_repos = search_repos(lang, token, per_page=3)
+        lang_issues = []  # Track issues for this language
         
         for repo in matching_repos:
             repo_name = repo["full_name"]
@@ -53,7 +55,13 @@ def get_recommendations(request: RecommendRequest, db: Session = Depends(get_db)
             for issue in issues:
                 issue["language"] = lang
                 issue["repo_stars"] = repo_stars
-            all_issues.extend(issues)
+            lang_issues.extend(issues)
+        
+        # Check if this language returned any issues
+        if len(lang_issues) == 0:
+            missing_languages.append(lang)
+        else:
+            all_issues.extend(lang_issues)
     
     # Filter out already chatted issues
     chatted_issue_urls = set()
@@ -76,5 +84,6 @@ def get_recommendations(request: RecommendRequest, db: Session = Depends(get_db)
             "interests": user_profile["interests"]
         },
         "recommendations": recommendations,
+        "missing_languages": missing_languages,
         "filtered_count": len(chatted_issue_urls)
     }
