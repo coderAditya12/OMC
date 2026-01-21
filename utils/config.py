@@ -7,6 +7,8 @@ DB_URL =os.getenv("DATABASE_URL")
 print(DB_URL)
 GITHUB_ACCESS_TOKEN = os.getenv("GITHUB_ACCESS_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+OPEN_ROUTER_QWEN_KEY = os.getenv("OPEN_ROUTER_QWEN_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 jwt_secret = os.getenv("JWT_SECRET_KEY")
 GITHUB_URL= "https://api.github.com"
 GITHUB_Oauth_token=os.getenv("GITHUB_Oauth_token")

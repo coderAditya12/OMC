@@ -4,6 +4,10 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from backend.services.chat_db import get_or_create_session, get_session_messages, save_message
 from backend.services.agent import chat, create_agent
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -37,12 +41,14 @@ def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
             compiled_agent, state = _sessions[session_id]
         else:
             # Create new agent
+            logger.info(f"Creating new agent for session {session_id}")
             compiled_agent, state = create_agent(
                 issue=issue,
                 repo_name=request.repo_name,
                 access_token=request.access_token,
                 system_prompt=request.system_prompt
             )
+            logger.info("Agent created successfully")
             
             # Load previous messages if session exists in DB
             if not is_new:
@@ -52,11 +58,13 @@ def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
         save_message(db, session_id, "user", request.message)
         
         # Call the AI agent
+        logger.info(f"Calling AI agent with message: {request.message[:50]}...")
         response, updated_messages = chat(
             agent=compiled_agent,
             state=state,
             user_message=request.message
         )
+        logger.info(f"Agent responded with {len(response)} characters")
         
         # Save assistant response
         save_message(db, session_id, "assistant", response)
@@ -72,4 +80,6 @@ def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Chat error: {type(e).__name__}: {str(e)}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")

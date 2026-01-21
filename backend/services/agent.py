@@ -1,16 +1,21 @@
 """
 LangGraph Agent - Agentic AI for helping with open source issues
 """
+import logging
 from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
-from utils.config import GEMINI_API_KEY
+from utils.config import GROQ_API_KEY
 from backend.services import tools
 from backend.services.github import get_readme
+
+# Setup logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 # Agent State
@@ -63,7 +68,7 @@ ANTI-HALLUCINATION RULES (MANDATORY):
     2. tell user this file contains specifically what.
     2. then explain the code in detail so user can understand it very well.
 
-🛠️ **Steps to Contribute**
+ **Steps to Contribute**
 1. Fork and clone the repository
 2. [Specific setup steps based on the actual tech stack]
 3. [Where to find the relevant code - reference actual file paths]
@@ -71,7 +76,7 @@ ANTI-HALLUCINATION RULES (MANDATORY):
 5. [How to test the changes]
 6. Open a pull request with a clear description
 
-🌱 **You've Got This!**
+ **You've Got This!**
 - End with genuine encouragement
 - Remind them that everyone starts somewhere
 - Offer to help with follow-up questions
@@ -126,10 +131,11 @@ Labels: {', '.join(issue.get('labels', []))}
 {readme_context}
 """
     
-    # Create LLM
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        api_key=GEMINI_API_KEY,
+    # Create LLM with Groq Cloud (fast inference)
+    # Valid Groq models: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        api_key=GROQ_API_KEY,
         temperature=0
     )
     
@@ -151,7 +157,7 @@ Labels: {', '.join(issue.get('labels', []))}
             return "tools"
         return END
     
-    # Build graph
+    # Build graph with recursion limit to prevent infinite loops
     graph = StateGraph(AgentState)
     graph.add_node("agent", agent_node)
     graph.add_node("tools", ToolNode(tool_list))
@@ -160,7 +166,9 @@ Labels: {', '.join(issue.get('labels', []))}
     graph.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
     graph.add_edge("tools", "agent")
     
+    # Add recursion limit to prevent infinite tool calling loops
     compiled = graph.compile()
+    compiled = compiled.with_config({"recursion_limit": 10})
     
     # Create initial state with system message
     prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
@@ -201,13 +209,19 @@ def chat(
     state["messages"].append(HumanMessage(content=user_message))
     
     # Run agent
-    result = agent.invoke(state)
+    try:
+        logger.debug(f"Invoking agent with {len(state['messages'])} messages")
+        result = agent.invoke(state)
+        logger.debug("Agent invocation successful")
+    except Exception as e:
+        logger.error(f"Agent invocation failed: {type(e).__name__}: {str(e)}")
+        raise
     
     # Get last AI message
     last_message = result["messages"][-1]
     content = last_message.content if hasattr(last_message, "content") else str(last_message)
     
-    # Handle Gemini 2.5 response format
+    # Handle response format
     if isinstance(content, list):
         # Extract text from each part - preserve newlines between parts
         parts = []
