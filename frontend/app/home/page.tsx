@@ -47,6 +47,15 @@ export default function HomePage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hasFetched, setHasFetched] = useState(false); // Use state instead of ref
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // Pagination constants
+    const ITEMS_PER_PAGE = 10;
+    const totalPages = Math.ceil(recommendations.length / ITEMS_PER_PAGE);
+    const paginatedIssues = recommendations.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -292,9 +301,54 @@ export default function HomePage() {
                         {/* Issues List */}
                         {!loading && !error && recommendations.length > 0 && (
                             <div className="space-y-4">
-                                {recommendations.map((issue, index) => (
-                                    <IssueCard key={Math.random() || index} issue={issue} index={index} />
+                                {paginatedIssues.map((issue, index) => (
+                                    <IssueCard key={issue.id || index} issue={issue} index={(currentPage - 1) * ITEMS_PER_PAGE + index} />
                                 ))}
+
+                                {/* Pagination Controls */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-4 pt-6 mt-6 border-t border-white/10">
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                            disabled={currentPage === 1}
+                                            className={`px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${currentPage === 1
+                                                    ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                                                    : 'bg-white/10 text-white hover:bg-white/20'
+                                                }`}
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                            </svg>
+                                            Previous
+                                        </motion.button>
+
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-white/60">Page</span>
+                                            <span className="px-3 py-1 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-lg text-white font-bold">
+                                                {currentPage}
+                                            </span>
+                                            <span className="text-white/60">of {totalPages}</span>
+                                        </div>
+
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className={`px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${currentPage === totalPages
+                                                    ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                                                    : 'bg-white/10 text-white hover:bg-white/20'
+                                                }`}
+                                        >
+                                            Next
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </motion.button>
+                                    </div>
+                                )}
                             </div>
                         )}
 
