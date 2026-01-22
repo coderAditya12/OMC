@@ -96,33 +96,58 @@ def search_repos(language: str, access_token: str = None, per_page: int = 10) ->
         return []
 
 
-# Beginner-friendly labels to search for
+# Labels organized by experience level
 BEGINNER_LABELS = [
-    "good first issue",   
-    "first-timers-only",   
-    "beginner",           
-    "beginner-friendly",  
+    "good first issue",
+    "first-timers-only",
+    "beginner",
+    "beginner-friendly",
     "help wanted",         
     "up-for-grabs",        
-    "easy",                
+    "easy",
     "low-hanging-fruit",   
-    "documentation",       
+    "documentation",
+    "starter"   
     "good-first-issue",
+    "low-hanging-fruit",
+    "up-for-grabs"
+]
+
+INTERMEDIATE_LABELS = [
+    "help wanted",
+    "enhancement",
+    "feature",
+    "bug",
+    "documentation",
     "tests",
     "DX",
-    "bug"
+    "refactor"
 ]
+
+ADVANCED_LABELS = [
+    "complex",
+    "architecture",
+    "performance",
+    "security",
+    "breaking-change",
+    "core",
+    "critical",
+    "difficult"
+]
+
+# Combined labels for fetching all issues
+ALL_LABELS = BEGINNER_LABELS + INTERMEDIATE_LABELS + ADVANCED_LABELS
 
 
 def get_issues(repo_full_name: str, per_page: int = 5, access_token: str = None, labels: list = None) -> list:
     """
-    Fetch issues with beginner-friendly labels from a repo.
+    Fetch issues with various difficulty labels from a repo.
     Uses OR logic - fetches issues with ANY of the specified labels.
     """
     headers = get_headers(access_token) if access_token else {}
     
-    # Use provided labels or default to BEGINNER_LABELS
-    search_labels = labels if labels else BEGINNER_LABELS
+    # Use provided labels or default to ALL_LABELS (all difficulty levels)
+    search_labels = labels if labels else ALL_LABELS
     
     all_issues = {}  # Use dict to deduplicate by issue id
     

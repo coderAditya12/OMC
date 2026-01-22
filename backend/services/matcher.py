@@ -47,18 +47,42 @@ def calculate_score(issue: dict, profile: dict) -> float:
     score += min(30, matches * 15)
     
     # 3. Experience Match (20 pts)
+    # Match user's experience level to issue difficulty
     level = profile.get("experience", {}).get("level", "beginner")
     labels = " ".join(issue.get("labels", [])).lower()
     
-    beginner_labels = ["good first issue", "beginner", "easy", "starter"]
-    has_beginner = any(bl in labels for bl in beginner_labels)
+    # Define label patterns for each difficulty level
+    beginner_patterns = ["good first issue", "beginner", "easy", "starter", "first-timers", "up-for-grabs", "low-hanging"]
+    intermediate_patterns = ["help wanted", "enhancement", "feature", "bug", "documentation", "tests", "refactor"]
+    advanced_patterns = ["complex", "architecture", "performance", "security", "breaking", "core", "critical", "difficult"]
     
-    if level == "beginner" and has_beginner:
-        score += 20
+    # Detect issue difficulty
+    has_beginner = any(p in labels for p in beginner_patterns)
+    has_intermediate = any(p in labels for p in intermediate_patterns)
+    has_advanced = any(p in labels for p in advanced_patterns)
+    
+    # Score based on match between user level and issue difficulty
+    if level == "beginner":
+        if has_beginner:
+            score += 20  # Perfect match
+        elif has_intermediate:
+            score += 10  # Stretch goal
+        else:
+            score += 5   # Too hard
     elif level == "intermediate":
-        score += 15
-    else:
-        score += 10
+        if has_intermediate:
+            score += 20  # Perfect match
+        elif has_beginner:
+            score += 15  # Easy for them
+        elif has_advanced:
+            score += 10  # Stretch goal
+    else:  # advanced
+        if has_advanced:
+            score += 20  # Perfect match
+        elif has_intermediate:
+            score += 15  # Easy for them
+        else:
+            score += 10  # Too easy
     
     # 4. Recency (10 pts)
     comments = issue.get("comments", 0)
