@@ -13,3 +13,5 @@ langchain-google-genai
 langgraph
 langgraph-checkpoint
 requests
+langchain-groq
+beautifulsoup4 
