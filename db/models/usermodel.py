@@ -29,10 +29,12 @@ class User(Base):
 def init_db():
     """
     Initialize all database tables.
-    We import chatmodel here to ensure all models are registered with Base.metadata
+    We import models here to ensure all models are registered with Base.metadata
     before calling create_all().
     """
     from db.models import chatmodel  # noqa - needed to register ChatSession, ChatMessage
+    from db.models import repomodel  # noqa - needed to register Repo
+    from db.models import issuemodel  # noqa - needed to register Issue
     
     try:
         Base.metadata.create_all(engine)
