@@ -1,6 +1,7 @@
 """
 LangGraph Agent - Agentic AI for helping with open source issues
 """
+from pyexpat import model
 import logging
 from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
@@ -8,8 +9,8 @@ from langchain_groq import ChatGroq
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
-
-from utils.config import GROQ_API_KEY
+from langchain_google_genai import ChatGoogleGenerativeAI
+from utils.config import GROQ_API_KEY,GEMINI_API_KEY
 from backend.services import tools
 from backend.services.github import get_readme
 
@@ -133,11 +134,12 @@ Labels: {', '.join(issue.get('labels', []))}
     
     # Create LLM with Groq Cloud (fast inference)
     # Valid Groq models: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
-    llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
-        api_key=GROQ_API_KEY,
-        temperature=0
-    )
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash",api_key=GEMINI_API_KEY,temperature=0)
+    # llm = ChatGroq(
+    #     model="llama-3.3-70b-versatile",
+    #     api_key=GROQ_API_KEY,
+    #     temperature=0
+    # )
     
     # Bind tools to LLM
     tool_list = tools.get_tools()
