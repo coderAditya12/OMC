@@ -1,7 +1,7 @@
 """
 Issue model - stores cached GitHub issues
 """
-from sqlalchemy import String, Integer, Boolean, DateTime, Text, ForeignKey, JSON
+from sqlalchemy import String, Integer, BigInteger, Boolean, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 
@@ -14,7 +14,7 @@ class Issue(Base):
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     repo_id: Mapped[int] = mapped_column(Integer, ForeignKey("repos.id"), nullable=False)
-    github_id: Mapped[int] = mapped_column(Integer, nullable=False)  # GitHub's issue ID
+    github_id: Mapped[int] = mapped_column(BigInteger, nullable=False)  # GitHub's issue ID (can be > 2B)
     number: Mapped[int] = mapped_column(Integer, nullable=False)  # Issue number in repo
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=True)
