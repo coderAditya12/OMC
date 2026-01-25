@@ -14,4 +14,5 @@ langgraph
 langgraph-checkpoint
 requests
 langchain-groq
-beautifulsoup4 
+beautifulsoup4
+redis

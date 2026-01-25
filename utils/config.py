@@ -12,3 +12,4 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 jwt_secret = os.getenv("JWT_SECRET_KEY")
 GITHUB_URL= "https://api.github.com"
 GITHUB_Oauth_token=os.getenv("GITHUB_Oauth_token")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
