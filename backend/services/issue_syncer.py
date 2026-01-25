@@ -115,11 +115,15 @@ def fetch_issues_from_github(repo_full_name: str) -> List[Dict]:
                 
                 issue_id = issue["id"]
                 if issue_id not in all_issues:
+                    # Sanitize text fields (PostgreSQL can't store NUL characters)
+                    title = (issue.get("title") or "").replace("\x00", "")
+                    body = (issue.get("body") or "").replace("\x00", "")[:2000]
+                    
                     all_issues[issue_id] = {
                         "github_id": issue_id,
                         "number": issue["number"],
-                        "title": issue["title"],
-                        "body": (issue.get("body") or "")[:2000],
+                        "title": title,
+                        "body": body,
                         "labels": [l["name"] for l in issue.get("labels", [])],
                         "html_url": issue["html_url"],
                         "is_open": issue["state"] == "open",

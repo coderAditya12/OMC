@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.staticmodel.pymodel import RecommendRequest
-from backend.services.github import get_user, get_repos, search_repos, get_issues
+from backend.services.github import get_user, get_repos
 from backend.services.profile import filter_repos, create_profile
 from backend.services.matcher import match_issues
 from backend.services.chat_db import ChatSession
+from backend.services.cached_issues import get_issues_by_languages
 from db.database import get_db
 
 router = APIRouter()
@@ -16,7 +17,7 @@ def get_recommendations(request: RecommendRequest, db: Session = Depends(get_db)
     
     token = request.access_token
     
-    # Fetch user from GitHub
+    # Fetch user from GitHub (still needed for authentication)
     user = get_user(token)
     if not user:
         raise HTTPException(status_code=400, detail="Failed to fetch user from GitHub")
@@ -38,30 +39,11 @@ def get_recommendations(request: RecommendRequest, db: Session = Depends(get_db)
     if not languages:
         languages = ["Python", "JavaScript"]
     
-    # Search for repos with good first issues
-    all_issues = []
+    # Get issues from PostgreSQL cache (NOT GitHub API!)
     top_languages = languages[:3]
-    missing_languages = []  # Track languages with no issues
-    
-    for lang in top_languages:
-        matching_repos = search_repos(lang, token, per_page=3)
-        lang_issues = []  # Track issues for this language
-        
-        for repo in matching_repos:
-            repo_name = repo["full_name"]
-            repo_stars = repo["stars"]
-            issues = get_issues(repo_name, per_page=5, access_token=token)
-            
-            for issue in issues:
-                issue["language"] = lang
-                issue["repo_stars"] = repo_stars
-            lang_issues.extend(issues)
-        
-        # Check if this language returned any issues
-        if len(lang_issues) == 0:
-            missing_languages.append(lang)
-        else:
-            all_issues.extend(lang_issues)
+    all_issues, missing_languages = get_issues_by_languages(
+        top_languages, db, per_language=15
+    )
     
     # Filter out already chatted issues
     chatted_issue_urls = set()
@@ -70,7 +52,7 @@ def get_recommendations(request: RecommendRequest, db: Session = Depends(get_db)
         for session in user_sessions:
             chatted_issue_urls.add(session.issue_url)
     
-    filtered_issues = [issue for issue in all_issues if issue.get("url") not in chatted_issue_urls]
+    filtered_issues = [issue for issue in all_issues if issue.get("html_url") not in chatted_issue_urls]
     
     # Match and rank issues
     recommendations = match_issues(filtered_issues, user_profile)
@@ -87,3 +69,4 @@ def get_recommendations(request: RecommendRequest, db: Session = Depends(get_db)
         "missing_languages": missing_languages,
         "filtered_count": len(chatted_issue_urls)
     }
+

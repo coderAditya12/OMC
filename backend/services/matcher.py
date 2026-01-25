@@ -85,7 +85,8 @@ def calculate_score(issue: dict, profile: dict) -> float:
             score += 10  # Too easy
     
     # 4. Recency (10 pts)
-    comments = issue.get("comments", 0)
+    # Support both API format (comments) and DB format (comments_count)
+    comments = issue.get("comments") or issue.get("comments_count", 0)
     if comments == 0:
         score += 10
     elif comments < 3:
