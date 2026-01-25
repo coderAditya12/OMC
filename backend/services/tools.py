@@ -29,58 +29,86 @@ def _get_headers():
 
 
 @tool
-def get_file_tree(path: str = "", depth: int = 3) -> str:
+def get_file_tree(path: str = "", depth: int = 2, branch: str = "main") -> str:
     """
-    Get the complete directory structure of the repository.
+    Get the directory structure of the repository.
     Use this to explore what files and folders exist.
+    Uses GitHub's Tree API to fetch entire tree in a single request.
     
     Args:
-        path: Directory path to explore (empty for root)
-        depth: How deep to explore (default 3 levels)
+        path: Directory path to filter (empty for root)
+        depth: How deep to explore (default 2 levels, max 3)
+        branch: Branch to fetch tree from (default "main")
     
     Returns:
-        Complete file tree with subdirectories
+        File tree with subdirectories (limited to 150 items)
     """
     if not _repo_name or not _access_token:
         return "Error: Repository context not set"
     
-    def fetch_tree(current_path: str, current_depth: int, prefix: str = "") -> list:
-        if current_depth <= 0:
-            return []
-        
-        try:
-            response = requests.get(
-                f"{GITHUB_URL}/repos/{_repo_name}/contents/{current_path}",
-                headers=_get_headers()
-            )
-            response.raise_for_status()
-            
-            lines = []
-            items = response.json()
-            
-            for i, item in enumerate(items):
-                is_last = i == len(items) - 1
-                connector = "└── " if is_last else "├── "
-                
-                if item.get("type") == "dir":
-                    lines.append(f"{prefix}{connector}📁 {item.get('name')}/")
-                    # Recursively fetch subdirectory
-                    new_prefix = prefix + ("    " if is_last else "│   ")
-                    lines.extend(fetch_tree(item.get("path"), current_depth - 1, new_prefix))
-                else:
-                    lines.append(f"{prefix}{connector}📄 {item.get('name')}")
-            
-            return lines
-        except Exception as e:
-            return [f"{prefix}Error: {str(e)}"]
+    depth = min(depth, 3)
+    MAX_ITEMS = 150
     
     try:
-        tree_lines = fetch_tree(path, depth)
-        if tree_lines:
-            # Wrap in code block for proper formatting
-            tree_content = "\n".join(tree_lines)
+        # Use Tree API to get entire tree in one request
+        response = requests.get(
+            f"{GITHUB_URL}/repos/{_repo_name}/git/trees/{branch}?recursive=1",
+            headers=_get_headers()
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        # Items are inside the "tree" key
+        tree_items = data.get("tree", [])
+        
+        # Filter by path prefix if specified
+        if path:
+            path = path.strip("/")
+            tree_items = [item for item in tree_items if item.get("path", "").startswith(path)]
+        
+        lines = []
+        item_count = 0
+        
+        for item in tree_items:
+            if item_count >= MAX_ITEMS:
+                lines.append(f"\n... (truncated, {len(tree_items) - MAX_ITEMS} more items)")
+                break
+            
+            item_path = item.get("path", "")
+            item_type = item.get("type", "")
+            
+            # Filter by depth
+            if path:
+                relative_path = item_path[len(path):].strip("/")
+            else:
+                relative_path = item_path
+            
+            path_depth = relative_path.count("/") + 1 if relative_path else 0
+            if path_depth > depth:
+                continue
+            
+            # Calculate indentation
+            indent = "  " * relative_path.count("/")
+            name = item_path.split("/")[-1]
+            
+            # Tree API uses "tree" for directories, "blob" for files
+            if item_type == "tree":
+                lines.append(f"{indent}📁 {name}/")
+                item_count += 1
+            elif item_type == "blob":
+                lines.append(f"{indent}📄 {name}")
+                item_count += 1
+        
+        if lines:
+            tree_content = "\n".join(lines)
             return f"```\n📦 {_repo_name}\n{tree_content}\n```"
         return "Empty directory"
+        
+    except requests.exceptions.HTTPError as e:
+        # If branch not found (404), try "master" as fallback
+        if e.response.status_code == 404 and branch == "main":
+            return get_file_tree.invoke({"path": path, "depth": depth, "branch": "master"})
+        return f"Error: {str(e)}"
     except Exception as e:
         return f"Error: {str(e)}"
 
