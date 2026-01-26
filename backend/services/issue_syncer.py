@@ -33,19 +33,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# Labels to fetch (beginner-friendly)
-ISSUE_LABELS = [
-    "good first issue",
-    "beginner",
-    "help wanted",
-    "good-first-issue",
-    "first-timers-only",
-    "easy",
-    "starter",
-]
-
-# Max issues per repo
-MAX_ISSUES_PER_REPO = 20
+# Labels to fetch (from centralized constants)
+from utils.constants import SYNC_LABELS as ISSUE_LABELS, MAX_ISSUES_PER_REPO
 
 
 def get_headers() -> dict:

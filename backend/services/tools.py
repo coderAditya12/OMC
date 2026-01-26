@@ -29,7 +29,7 @@ def _get_headers():
 
 
 @tool
-def get_file_tree(path: str = "", depth: int = 2, branch: str = "main") -> str:
+def get_file_tree(path: str = "", depth: int = 5, branch: str = "main") -> str:
     """
     Get the directory structure of the repository.
     Use this to explore what files and folders exist.
@@ -37,17 +37,17 @@ def get_file_tree(path: str = "", depth: int = 2, branch: str = "main") -> str:
     
     Args:
         path: Directory path to filter (empty for root)
-        depth: How deep to explore (default 2 levels, max 3)
+        depth: How deep to explore (default 5 levels, max 10)
         branch: Branch to fetch tree from (default "main")
     
     Returns:
-        File tree with subdirectories (limited to 150 items)
+        File tree with subdirectories
     """
     if not _repo_name or not _access_token:
         return "Error: Repository context not set"
     
-    depth = min(depth, 3)
-    MAX_ITEMS = 150
+    depth = min(depth, 10)  # Allow deeper exploration
+    MAX_ITEMS = 500  # Increased from 150
     
     try:
         # Use Tree API to get entire tree in one request

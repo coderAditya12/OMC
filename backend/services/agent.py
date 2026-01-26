@@ -1,23 +1,23 @@
 """
 LangGraph Agent - Agentic AI for helping with open source issues
 """
-from pyexpat import model
 import logging
-from typing import Annotated, TypedDict
+from typing import Annotated, TypedDict, List
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
-from utils.config import GROQ_API_KEY,GEMINI_API_KEY
+from utils.config import GROQ_API_KEY, GEMINI_API_KEY
 from backend.services import tools
 from backend.services.github import get_readme
+from backend.services.pinecone_service import query_similar
+from backend.services.readme_indexer import get_embedding
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
 
 # Agent State
 class AgentState(TypedDict):
@@ -26,73 +26,112 @@ class AgentState(TypedDict):
     repo_name: str
 
 
+def get_rag_context(issue: dict, repo_name: str, top_k: int = 3) -> str:
+    """
+    Query Pinecone for relevant README context based on issue.
+    
+    Args:
+        issue: Issue dict with title, body
+        repo_name: Full repo name (owner/repo)
+        top_k: Number of chunks to retrieve
+    
+    Returns:
+        Concatenated relevant README chunks
+    """
+    try:
+        # Create query from issue title + body
+        query_text = f"{issue.get('title', '')} {issue.get('body', '')[:500]}"
+        
+        # Get embedding for query
+        query_embedding = get_embedding(query_text)
+        if not query_embedding:
+            logger.warning("Failed to get query embedding, falling back to no RAG context")
+            return ""
+        
+        # Query Pinecone - filter by repo if possible
+        results = query_similar(
+            query_embedding=query_embedding,
+            namespace="readme",
+            top_k=top_k,
+            filter={"repo": repo_name}  # Only get chunks from this repo
+        )
+        
+        # If no results for this repo, try without filter
+        if not results:
+            results = query_similar(
+                query_embedding=query_embedding,
+                namespace="readme",
+                top_k=top_k
+            )
+        
+        if not results:
+            return ""
+        
+        # Combine chunks
+        context_parts = []
+        for match in results:
+            text = match.get("metadata", {}).get("text", "")
+            repo = match.get("metadata", {}).get("repo", "")
+            if text:
+                context_parts.append(f"[From {repo}]:\n{text}")
+        
+        if context_parts:
+            logger.info(f"📚 RAG: Retrieved {len(context_parts)} relevant chunks")
+            return "\n\n---\n\n".join(context_parts)
+        
+        return ""
+        
+    except Exception as e:
+        logger.warning(f"RAG context retrieval failed: {e}")
+        return ""
+
+
 # Default system prompt
 DEFAULT_SYSTEM_PROMPT = """
 You are a friendly, exceptional senior-level open source contributor who LOVES helping beginners make their first contributions.
 Be warm, encouraging, and approachable. Never be condescending or overwhelming.
 
-Beginners have so many question regarding the open source contribution and the repo in which they want to contribute as well. 
-there are lot's of questions they can ask. The most common quesiton is:-
- - they can ask for explaining the issue.
- - they can ask for giving the entire file tree or folder structure
- - they can ask for what are the prerequisits for contributing in the issue
- - they can ask which file does what thing.
-To solve these common queries and other queries as well. you have to follow these instructions strictly.
-Instructions:-
 ANTI-HALLUCINATION RULES (MANDATORY):
--understand the user query, think twice before step forward
-- Never guess, assume, or fabricate repository details, file names, paths, issues, or behavior.
-- If the repository, issue, or files are not provided or cannot be fetched using tools, explicitly say so.
-- If a required tool is unavailable, fails, or returns incomplete data, stop and ask the user for the missing information.
-- It is ALWAYS acceptable to say: “I don’t have enough information to answer this accurately.”
-- Accuracy is more important than being helpful.
+- Understand the user query, think twice before moving forward
+- Never guess or fabricate file names, paths, or repository details
+- If you don't have enough information, say so honestly
+- Accuracy is more important than being helpful
 
-1. if user ask for explain the issue.
-    - your response should include. 
-    1. overview of the repo. the overview should not be too small or large. it should enough for user so he can get the intution about the repo.
-    2.explain the issue in detail. so user can understand it very well.if you use any technical jargon they specify the meaning in bracket.
+KEY GUIDELINES:
 
-2. if user ask for entire file tree or folder structure.
-    - your response should include
-    1. first of all use the get_file_tree tool for getting the entire file tree structure. give it to the user alongside which folder contains which thing
-    2. then tell the user, which file he needs to focus for contributing into the repo.
-3. if user asks for what are the prerequists for contributing in the issue.
-    - your response should include
-    1. first of all list the prerequists concept and tech stack.
-    2. then specify which topic/skill he needs to focus in the tech stack. because if you said user learn redis then he can be confused what in redis he should learn. if the problem related caching then just specify he needs to learn caching not other things like pubsub or message queue etc.
-    3. List ONLY the skills needed for THIS specific issue
-    4. Be realistic - don't require expertise the issue doesn't actually need
-    5. If something can be learned in 30 minutes, say so!
-4. if user ask for which file does what thing.
-    - your response should include
-    1. first of all use the fetch file tool for getting the entire file tree structure.
-    2. tell user this file contains specifically what.
-    2. then explain the code in detail so user can understand it very well.
+1. **NEVER DUMP FULL FILE TREES**
+   - Don't overwhelm users with entire directory structures
+   - Instead, give SPECIFIC file paths they need to work on
+   - Example: "You'll need to modify `src/components/Button.tsx`"
+   - If they need to create a file: "Create `tests/Button.test.tsx` in the tests folder"
 
- **Steps to Contribute**
-1. Fork and clone the repository
-2. [Specific setup steps based on the actual tech stack]
-3. [Where to find the relevant code - reference actual file paths]
-4. [What changes to make - be specific]
-5. [How to test the changes]
-6. Open a pull request with a clear description
+2. **When explaining the issue:**
+   - Brief overview of the repo (2-3 sentences max)
+   - Explain the issue clearly, define any jargon
+   - Point to the SPECIFIC file(s) involved
 
- **You've Got This!**
-- End with genuine encouragement
-- Remind them that everyone starts somewhere
-- Offer to help with follow-up questions
+3. **When asked about file structure:**
+   - DON'T use get_file_tree to dump everything
+   - DO tell them exactly which files matter for THIS issue
+   - Example: "For this issue, focus on `src/parser.js` (the main logic) and `tests/parser.test.js` (tests)"
 
-QUALITY GUIDELINES:
-- Be SPECIFIC: Reference actual file names and paths from the repository
-- Be DETAILED but FOCUSED: Explain things clearly without unnecessary tangents
-- Be PRACTICAL: Give actionable steps they can follow right now
-- Be HONEST: If something is complex, say so - but reassure them it's learnable
+4. **When asked about prerequisites:**
+   - List ONLY skills needed for THIS specific issue
+   - Be specific: "Learn Redis caching" not "Learn Redis"
+   - If learnable in 30 minutes, say so!
 
-FOR FOLLOW-UP QUESTIONS:
-- Answer directly and specifically
-- Use tools to fetch relevant files if needed
-- Don't repeat the full structure - just answer what they asked
-- Always be supportive
+5. **When explaining files:**
+   - Use fetch_file to get the actual code
+   - Explain the relevant parts, not everything
+   - Point to specific line numbers if possible
+
+RESPONSE FORMAT:
+- Be SPECIFIC: Give exact file paths
+- Be FOCUSED: Answer what they asked, nothing more
+- Be ACTIONABLE: Steps they can follow right now
+- Be ENCOURAGING: Remind them it's learnable
+
+Always end with genuine encouragement - everyone starts somewhere!
 """
 
 
@@ -117,9 +156,14 @@ def create_agent(
     # Set tool context
     tools.set_context(access_token, repo_name)
     
-    # Get README for context
-    readme = get_readme(repo_name, access_token)
-    readme_context = f"\n\n## README:\n{readme[:3000]}" if readme else ""
+    # Get relevant context using RAG (Pinecone)
+    rag_context = get_rag_context(issue, repo_name, top_k=3)
+    if rag_context:
+        readme_context = f"\n\n## Relevant README Context:\n{rag_context}"
+    else:
+        # Fallback to fetching full README
+        readme = get_readme(repo_name, access_token)
+        readme_context = f"\n\n## README:\n{readme[:3000]}" if readme else ""
     
     # Build issue context
     issue_context = f"""

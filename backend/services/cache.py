@@ -16,12 +16,9 @@ from typing import Optional, List, Dict, Any
 import redis
 
 from utils.config import REDIS_URL
+from utils.constants import USER_PROFILE_TTL, HOT_ISSUES_TTL
 
 logger = logging.getLogger(__name__)
-
-# Cache TTL settings (in seconds)
-USER_PROFILE_TTL = 15 * 60  # 15 minutes
-HOT_ISSUES_TTL = 30 * 60    # 30 minutes
 
 # Redis connection pool (singleton)
 _redis_client: Optional[redis.Redis] = None

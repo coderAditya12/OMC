@@ -16,3 +16,4 @@ requests
 langchain-groq
 beautifulsoup4
 redis
+google-generativeai
