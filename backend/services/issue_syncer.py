@@ -269,21 +269,26 @@ def main():
     
     try:
         sync_all_repos(db, limit=limit, repo_filter=repo_filter)
-        
-        # Index READMEs to Pinecone after syncing issues
-        if index_readme:
-            logger.info("")
-            logger.info("=" * 60)
-            logger.info("📚 Starting README indexing to Pinecone...")
-            logger.info("=" * 60)
-            try:
-                from backend.services.readme_indexer import index_all_repos as index_readmes
-                index_readmes(limit=limit)
-            except Exception as e:
-                logger.error(f"❌ README indexing failed: {e}")
-                # Don't fail the whole sync if README indexing fails
     finally:
-        db.close()
+        # Close DB connection BEFORE README indexing to avoid SSL timeout
+        try:
+            db.close()
+        except Exception as e:
+            logger.warning(f"⚠️ DB close warning (non-fatal): {e}")
+    
+    # Index READMEs to Pinecone after syncing issues
+    # This runs with its own fresh DB connection
+    if index_readme:
+        logger.info("")
+        logger.info("=" * 60)
+        logger.info("📚 Starting README indexing to Pinecone...")
+        logger.info("=" * 60)
+        try:
+            from backend.services.readme_indexer import index_all_repos as index_readmes
+            index_readmes(limit=limit)
+        except Exception as e:
+            logger.error(f"❌ README indexing failed: {e}")
+            # Don't fail the whole sync if README indexing fails
 
 
 if __name__ == "__main__":
