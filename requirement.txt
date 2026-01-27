@@ -17,4 +17,4 @@ langchain-groq
 beautifulsoup4
 redis
 google-generativeai
-Pinecone
+pinecone
