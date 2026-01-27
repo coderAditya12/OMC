@@ -13,6 +13,7 @@ This script:
 """
 import logging
 import requests
+import os
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import List, Dict
@@ -254,6 +255,7 @@ def main():
     # Parse args
     limit = None
     repo_filter = None
+    index_readme = "--index-readme" in sys.argv or os.environ.get("INDEX_README", "false").lower() == "true"
     
     args = sys.argv[1:]
     for i, arg in enumerate(args):
@@ -267,6 +269,19 @@ def main():
     
     try:
         sync_all_repos(db, limit=limit, repo_filter=repo_filter)
+        
+        # Index READMEs to Pinecone after syncing issues
+        if index_readme:
+            logger.info("")
+            logger.info("=" * 60)
+            logger.info("📚 Starting README indexing to Pinecone...")
+            logger.info("=" * 60)
+            try:
+                from backend.services.readme_indexer import index_all_repos as index_readmes
+                index_readmes(limit=limit)
+            except Exception as e:
+                logger.error(f"❌ README indexing failed: {e}")
+                # Don't fail the whole sync if README indexing fails
     finally:
         db.close()
 
