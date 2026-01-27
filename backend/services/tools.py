@@ -146,6 +146,37 @@ def fetch_file(file_path: str) -> str:
         return f"Error fetching file: {str(e)}"
 
 
+@tool
+def get_github_link(file_path: str, start_line: int = None, end_line: int = None, branch: str = "main") -> str:
+    """
+    Generate a GitHub link to a specific file and line range.
+    Use this to give users a direct clickable link to the code they need to work on.
+    
+    Args:
+        file_path: Path to the file in the repo (e.g., "src/server/router.ts")
+        start_line: Starting line number (optional)
+        end_line: Ending line number (optional)  
+        branch: Branch name (default "main", use "canary" for Next.js)
+    
+    Returns:
+        GitHub URL to the file with line anchors
+    """
+    if not _repo_name:
+        return "Error: Repository context not set"
+    
+    # Clean up file path
+    file_path = file_path.lstrip("/")
+    
+    url = f"https://github.com/{_repo_name}/blob/{branch}/{file_path}"
+    
+    if start_line and end_line:
+        url += f"#L{start_line}-L{end_line}"
+    elif start_line:
+        url += f"#L{start_line}"
+    
+    return url
+
+
 # Future tool - placeholder for Pinecone integration
 # @tool
 # def search_code(query: str) -> str:
@@ -159,4 +190,4 @@ def fetch_file(file_path: str) -> str:
 
 def get_tools():
     """Get list of available tools"""
-    return [get_file_tree, fetch_file]
+    return [get_file_tree, fetch_file, get_github_link]
