@@ -149,6 +149,61 @@ def get_available_languages(db: Session) -> List[Dict]:
     ]
 
 
+def get_popular_issues(db: Session, limit: int = 20) -> List[Dict]:
+    """
+    Get popular issues across all languages (fallback for empty results).
+    Prioritizes repos with most stars and recent issues.
+    """
+    logger.info("🌟 Fetching popular issues as fallback...")
+    
+    issues = (
+        db.query(Issue)
+        .join(Repo)
+        .filter(
+            Repo.is_active == True,
+            Issue.is_open == True
+        )
+        .order_by(
+            Repo.stars.desc(),
+            Issue.updated_at.desc()
+        )
+        .limit(limit)
+        .all()
+    )
+    
+    return [issue_to_dict(issue) for issue in issues]
+
+
+def check_data_freshness(db: Session) -> Dict:
+    """
+    Check if cached issue data is stale (>48h since last sync).
+    
+    Returns:
+        {"is_stale": bool, "last_synced": datetime, "hours_ago": int}
+    """
+    from datetime import datetime, timedelta
+    
+    # Get most recently updated issue
+    latest = (
+        db.query(Issue.updated_at)
+        .order_by(Issue.updated_at.desc())
+        .first()
+    )
+    
+    if not latest or not latest[0]:
+        return {"is_stale": True, "last_synced": None, "hours_ago": None}
+    
+    last_synced = latest[0]
+    hours_ago = int((datetime.utcnow() - last_synced).total_seconds() / 3600)
+    is_stale = hours_ago > 48
+    
+    return {
+        "is_stale": is_stale,
+        "last_synced": last_synced.isoformat(),
+        "hours_ago": hours_ago
+    }
+
+
 def warm_cache(db: Session, top_n: int = 10):
     """Pre-warm cache for top languages."""
     logger.info("🔥 Warming issue cache...")

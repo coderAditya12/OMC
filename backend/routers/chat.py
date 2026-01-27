@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from backend.services.chat_db import get_or_create_session, get_session_messages, save_message
 from backend.services.agent import chat, create_agent
+from langchain_core.messages import HumanMessage, AIMessage
 import logging
 import traceback
 
@@ -13,6 +14,21 @@ router = APIRouter()
 
 # In-memory cache for agent sessions
 _sessions = {}
+
+
+def restore_messages_from_db(db_messages) -> list:
+    """
+    Convert database messages to LangChain message format.
+    This allows the agent to remember previous conversation.
+    """
+    langchain_messages = []
+    for msg in db_messages:
+        if msg.role == "user":
+            langchain_messages.append(HumanMessage(content=msg.content))
+        elif msg.role == "assistant":
+            langchain_messages.append(AIMessage(content=msg.content))
+    return langchain_messages
+
 
 @router.post("/chat")
 def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
@@ -39,6 +55,7 @@ def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
         # Check if agent already exists in memory
         if session_id in _sessions:
             compiled_agent, state = _sessions[session_id]
+            logger.info(f"Reusing cached agent for session {session_id}")
         else:
             # Create new agent
             logger.info(f"Creating new agent for session {session_id}")
@@ -50,9 +67,17 @@ def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
             )
             logger.info("Agent created successfully")
             
-            # Load previous messages if session exists in DB
+            # Restore previous messages if session exists in DB
+            # This is the KEY fix - convert DB messages to LangChain format
             if not is_new:
                 db_messages = get_session_messages(db, session_id)
+                if db_messages:
+                    restored_messages = restore_messages_from_db(db_messages)
+                    state["messages"].extend(restored_messages)
+                    logger.info(f"Restored {len(restored_messages)} messages from database")
+            
+            # Cache the agent
+            _sessions[session_id] = (compiled_agent, state)
         
         # Save user message
         save_message(db, session_id, "user", request.message)
@@ -76,7 +101,8 @@ def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
         return {
             "status": "success",
             "session_id": session_id,
-            "response": response
+            "response": response,
+            "message_count": len(updated_messages)  # Useful for debugging
         }
         
     except Exception as e:
