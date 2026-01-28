@@ -18,6 +18,7 @@ import ProfileCard from "@/components/home/ProfileCard";
 import IssueCard from "@/components/home/IssueCard";
 import StatsGrid from "@/components/home/StatsGrid";
 import FloatingOrbs from "@/components/ui/FloatingOrbs";
+import { ProfileCardSkeleton, StatsGridSkeleton, IssuesListSkeleton } from "@/components/ui/Skeleton";
 
 interface Issue {
     id: number;
@@ -189,9 +190,11 @@ export default function HomePage() {
                         </p>
                     </motion.div>
 
-                    {/* Profile Card */}
-                    {profile && (
-                        <div className="mb-8">
+                    {/* Profile Card - Show skeleton when loading */}
+                    <div className="mb-8">
+                        {loading ? (
+                            <ProfileCardSkeleton />
+                        ) : profile && (
                             <ProfileCard
                                 username={profile.username}
                                 primaryLanguage={profile.primary_language}
@@ -199,12 +202,16 @@ export default function HomePage() {
                                 interests={profile.interests}
                                 userImage={session.user?.image}
                             />
-                        </div>
-                    )}
+                        )}
+                    </div>
 
-                    {/* Stats Grid */}
+                    {/* Stats Grid - Show skeleton when loading */}
                     <div className="mb-8">
-                        <StatsGrid stats={stats} />
+                        {loading ? (
+                            <StatsGridSkeleton />
+                        ) : (
+                            <StatsGrid stats={stats} />
+                        )}
                     </div>
 
                     {/* Recommendations Section */}
@@ -240,21 +247,10 @@ export default function HomePage() {
                             </motion.button>
                         </div>
 
-                        {/* Loading State */}
+                        {/* Loading State - Skeleton */}
                         {loading && (
-                            <div className="flex flex-col items-center justify-center py-20">
-                                <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                                >
-                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] flex items-center justify-center shadow-xl shadow-[hsl(191,91%,37%,0.25)]">
-                                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                    </div>
-                                </motion.div>
-                                <p className="text-[var(--foreground-muted)] mt-6 text-lg">Analyzing your profile...</p>
-                                <p className="text-[var(--foreground-subtle)] text-sm mt-2">Finding the best matches for you</p>
+                            <div className="space-y-6">
+                                <IssuesListSkeleton count={5} />
                             </div>
                         )}
 
