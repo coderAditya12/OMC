@@ -1,13 +1,11 @@
 "use client";
 
 /**
- * ChatHeader Component - ChatGPT Style
- * 
- * Clean header with issue context and sidebar toggle
+ * ChatHeader Component
+ * Header with compass logo, AI status badge, and tool buttons
  */
 
 import { motion } from "framer-motion";
-import Link from "next/link";
 
 interface ChatHeaderProps {
     issueTitle: string;
@@ -28,56 +26,79 @@ export default function ChatHeader({
         <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-950/80 backdrop-blur-xl border-b border-white/10 sticky top-0 z-40"
+            className="glass-navbar sticky top-0 z-40"
         >
-            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-4">
-                {/* Toggle Sidebar Button */}
-                <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={onToggleSidebar}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                    title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
-                >
-                    <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        {sidebarOpen ? (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                        ) : (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        )}
-                    </svg>
-                </motion.button>
+            <div className="max-w-5xl mx-auto px-4 py-3">
+                <div className="flex items-center gap-4">
+                    {/* Toggle Sidebar Button */}
+                    <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={onToggleSidebar}
+                        className="p-2 hover:bg-[hsl(0,0%,100%,0.1)] rounded-lg transition-colors"
+                        title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+                    >
+                        <svg className="w-5 h-5 text-[var(--foreground-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {sidebarOpen ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                            ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            )}
+                        </svg>
+                    </motion.button>
 
-                {/* Issue Info */}
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs">🧭</span>
+                    {/* Logo & Title */}
+                    <div className="flex items-center gap-3">
+                        <motion.div
+                            whileHover={{ rotate: 45 }}
+                            className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] flex items-center justify-center"
+                        >
+                            <span className="text-sm">🧭</span>
+                        </motion.div>
+                        <div>
+                            <h1 className="text-white font-semibold flex items-center gap-2">
+                                AI Assistant
+                                {/* Active Badge */}
+                                <span className="badge-active px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[hsl(142,71%,55%)] animate-pulse"></span>
+                                    Active
+                                </span>
+                            </h1>
+                            <p className="text-[var(--foreground-subtle)] text-xs">
+                                Powered by RAG + LangGraph
+                            </p>
                         </div>
-                        <h1 className="text-white font-semibold truncate">
-                            {issueTitle || "New Chat"}
-                        </h1>
                     </div>
-                    {repoName && (
-                        <p className="text-white/50 text-sm truncate pl-8">
-                            {repoName}
-                        </p>
-                    )}
+
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Tool Buttons */}
+                    <div className="hidden md:flex items-center gap-2">
+                        {issueUrl && (
+                            <a
+                                href={issueUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-ghost text-xs flex items-center gap-1.5"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                Issue Details
+                            </a>
+                        )}
+                    </div>
                 </div>
 
-                {/* View Issue Button */}
-                {issueUrl && (
-                    <a
-                        href={issueUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm transition-all"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                        <span className="hidden sm:inline">View Issue</span>
-                    </a>
+                {/* Issue Context Bar */}
+                {(issueTitle && issueTitle !== "Unknown Issue") && (
+                    <div className="mt-2 pt-2 border-t border-[var(--border)]">
+                        <p className="text-sm text-white truncate">{issueTitle}</p>
+                        {repoName && (
+                            <p className="text-xs text-[var(--foreground-subtle)]">{repoName}</p>
+                        )}
+                    </div>
                 )}
             </div>
         </motion.div>

@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * ChatInput Component - ChatGPT Style
- * 
- * Centered input at the bottom like ChatGPT
+ * ChatInput Component
+ * Modern input with glass styling and gradient send button
  */
 
 import { motion } from "framer-motion";
@@ -32,7 +31,7 @@ export default function ChatInput({
     };
 
     return (
-        <div className="sticky bottom-0 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent pt-6 pb-6">
+        <div className="sticky bottom-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)] to-transparent pt-6 pb-6">
             <div className="max-w-3xl mx-auto px-4">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -40,7 +39,7 @@ export default function ChatInput({
                     className="relative"
                 >
                     {/* Input Container */}
-                    <div className="flex items-end gap-3 bg-slate-900 border border-white/20 rounded-2xl p-2 shadow-xl focus-within:border-emerald-500/50 transition-colors">
+                    <div className="flex items-end gap-3 glass-card p-2 focus-within:border-[hsl(191,91%,37%,0.5)] transition-colors !rounded-2xl">
                         {/* Text Area */}
                         <textarea
                             value={value}
@@ -48,7 +47,7 @@ export default function ChatInput({
                             onKeyDown={handleKeyDown}
                             placeholder={placeholder}
                             rows={1}
-                            className="flex-1 bg-transparent border-none px-3 py-2 text-white placeholder-white/40 focus:outline-none resize-none max-h-32 min-h-[44px]"
+                            className="flex-1 bg-transparent border-none px-3 py-2 text-white placeholder-[var(--foreground-subtle)] focus:outline-none resize-none max-h-32 min-h-[44px]"
                             style={{ scrollbarWidth: "thin" }}
                         />
 
@@ -59,8 +58,8 @@ export default function ChatInput({
                             onClick={onSend}
                             disabled={disabled || !value.trim()}
                             className={`flex-shrink-0 p-3 rounded-xl transition-all ${disabled || !value.trim()
-                                    ? "bg-white/10 text-white/30 cursor-not-allowed"
-                                    : "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
+                                ? "bg-[hsl(0,0%,100%,0.1)] text-[var(--foreground-subtle)] cursor-not-allowed"
+                                : "bg-gradient-to-r from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] text-white shadow-lg shadow-[hsl(191,91%,37%,0.25)] hover:shadow-[hsl(191,91%,37%,0.4)]"
                                 }`}
                         >
                             {disabled ? (
@@ -81,7 +80,7 @@ export default function ChatInput({
                     </div>
 
                     {/* Hint Text */}
-                    <p className="text-center text-white/30 text-xs mt-3">
+                    <p className="text-center text-[var(--foreground-subtle)] text-xs mt-3">
                         Press Enter to send • Shift+Enter for new line
                     </p>
                 </motion.div>

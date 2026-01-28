@@ -186,7 +186,7 @@ Labels: {', '.join(issue.get('labels', []))}
     
     # Create LLM with Groq Cloud (fast inference)
     # Valid Groq models: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash",api_key=GEMINI_API_KEY,temperature=0)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite",api_key=GEMINI_API_KEY,temperature=0)
     # llm = ChatGroq(
     #     model="llama-3.3-70b-versatile",
     #     api_key=GROQ_API_KEY,
@@ -271,26 +271,41 @@ def chat(
         logger.error(f"Agent invocation failed: {type(e).__name__}: {str(e)}")
         raise
     
-    # Get last AI message
-    last_message = result["messages"][-1]
-    content = last_message.content if hasattr(last_message, "content") else str(last_message)
+    # Find the last AI message with actual content (not tool calls)
+    response = ""
+    for message in reversed(result["messages"]):
+        # Skip tool messages
+        if hasattr(message, "type") and message.type == "tool":
+            continue
+        
+        # Check if it's an AI message with content
+        if hasattr(message, "content"):
+            content = message.content
+            
+            # Handle response format
+            if isinstance(content, list):
+                # Extract text from each part
+                parts = []
+                for part in content:
+                    if isinstance(part, dict):
+                        text = part.get("text", "")
+                        if text:
+                            parts.append(text)
+                    elif isinstance(part, str) and part.strip():
+                        parts.append(part)
+                if parts:
+                    response = "\n".join(parts)
+                    break
+            elif isinstance(content, dict):
+                text = content.get("text", "")
+                if text:
+                    response = text
+                    break
+            elif isinstance(content, str) and content.strip():
+                response = content
+                break
     
-    # Handle response format
-    if isinstance(content, list):
-        # Extract text from each part - preserve newlines between parts
-        parts = []
-        for part in content:
-            if isinstance(part, dict):
-                parts.append(part.get("text", ""))
-            elif isinstance(part, str):
-                parts.append(part)
-            else:
-                parts.append(str(part))
-        response = "\n".join(parts)
-    elif isinstance(content, dict):
-        response = content.get("text", str(content))
-    else:
-        response = str(content)
+    logger.debug(f"Final response length: {len(response)} chars")
     
     return response, result["messages"]
 

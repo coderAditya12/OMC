@@ -44,11 +44,11 @@ export default function Footer() {
                     <div className="lg:col-span-2">
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] flex items-center justify-center">
                                 <span className="text-white text-lg">🧭</span>
                             </div>
                             <span className="text-white font-bold text-xl">
-                                OpenSource<span className="text-emerald-400">Compass</span>
+                                OpenSource<span className="gradient-text">Compass</span>
                             </span>
                         </Link>
 
@@ -64,7 +64,7 @@ export default function Footer() {
                                 href="https://twitter.com"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-emerald-500/50 transition-all"
+                                className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-[hsl(191,91%,37%,0.5)] transition-all"
                             >
                                 <svg className="w-5 h-5 text-white/70" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -105,7 +105,7 @@ export default function Footer() {
                                 <li key={index}>
                                     <Link
                                         href={link.href}
-                                        className="text-white/50 hover:text-emerald-400 transition-colors text-sm"
+                                        className="text-white/50 hover:text-[hsl(191,91%,50%)] transition-colors text-sm"
                                     >
                                         {link.label}
                                     </Link>

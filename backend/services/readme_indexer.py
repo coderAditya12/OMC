@@ -82,7 +82,8 @@ def get_embedding(text: str) -> Optional[List[float]]:
         client = genai.Client(api_key=GEMINI_API_KEY)
         
         result = client.models.embed_content(
-            model="text-embedding-004",
+            # model="text-embedding-004",
+            model="gemini-embedding-1.0",
             contents=text[:8000],  # Limit input
         )
         

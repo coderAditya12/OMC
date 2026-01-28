@@ -2,7 +2,7 @@
 
 /**
  * Issue Card Component
- * Beautiful card for displaying recommended issues
+ * Beautiful card for displaying recommended issues with new design system
  */
 
 import { motion } from "framer-motion";
@@ -28,11 +28,11 @@ interface IssueCardProps {
 export default function IssueCard({ issue, index }: IssueCardProps) {
     const router = useRouter();
 
-    // Get score colors
+    // Get score colors based on match percentage
     const getScoreGradient = (score: number) => {
-        if (score >= 70) return "from-emerald-500 to-green-500";
-        if (score >= 50) return "from-amber-500 to-orange-500";
-        return "from-blue-500 to-cyan-500";
+        if (score >= 70) return "from-[hsl(142,71%,45%)] to-[hsl(142,71%,35%)]";
+        if (score >= 50) return "from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)]";
+        return "from-[hsl(217,91%,60%)] to-[hsl(217,91%,50%)]";
     };
 
     const handleAskAI = () => {
@@ -52,7 +52,7 @@ export default function IssueCard({ issue, index }: IssueCardProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             whileHover={{ scale: 1.01, y: -4 }}
-            className="group p-5 rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-emerald-500/40 transition-all duration-300"
+            className="group glass-card p-5 hover:border-[hsl(191,91%,37%,0.4)] transition-all duration-300"
         >
             <div className="flex items-start gap-4">
                 {/* Match Score Badge */}
@@ -68,7 +68,7 @@ export default function IssueCard({ issue, index }: IssueCardProps) {
                         href={issue.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-lg font-semibold text-white hover:text-emerald-400 transition-colors line-clamp-2 mb-2 block"
+                        className="text-lg font-semibold text-white hover:text-[hsl(191,91%,50%)] transition-colors line-clamp-2 mb-2 block"
                     >
                         {issue.title}
                     </a>
@@ -76,7 +76,7 @@ export default function IssueCard({ issue, index }: IssueCardProps) {
                     {/* Meta Info */}
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                         {/* Repo */}
-                        <span className="text-white/50 text-sm flex items-center gap-1.5">
+                        <span className="text-[var(--foreground-muted)] text-sm flex items-center gap-1.5">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                             </svg>
@@ -85,15 +85,15 @@ export default function IssueCard({ issue, index }: IssueCardProps) {
 
                         {/* Language */}
                         {issue.language && (
-                            <span className="px-2.5 py-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 rounded-lg text-emerald-300 text-xs font-medium flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <span className="px-2.5 py-1 bg-[hsl(191,91%,37%,0.15)] border border-[hsl(191,91%,37%,0.3)] rounded-lg text-[hsl(191,91%,55%)] text-xs font-medium flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-[hsl(191,91%,50%)]"></span>
                                 {issue.language}
                             </span>
                         )}
 
                         {/* Fresh Badge */}
                         {issue.comments === 0 && (
-                            <span className="px-2.5 py-1 bg-amber-500/20 border border-amber-500/30 rounded-lg text-amber-300 text-xs font-medium flex items-center gap-1">
+                            <span className="px-2.5 py-1 bg-[hsl(38,92%,50%,0.15)] border border-[hsl(38,92%,50%,0.3)] rounded-lg text-[hsl(38,92%,60%)] text-xs font-medium flex items-center gap-1">
                                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                                 </svg>
@@ -107,13 +107,13 @@ export default function IssueCard({ issue, index }: IssueCardProps) {
                         {issue.labels.slice(0, 4).map((label) => (
                             <span
                                 key={label}
-                                className="px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-white/60 text-xs"
+                                className="px-2 py-1 bg-[hsl(0,0%,100%,0.05)] border border-[var(--border)] rounded-lg text-[var(--foreground-muted)] text-xs"
                             >
                                 {label}
                             </span>
                         ))}
                         {issue.labels.length > 4 && (
-                            <span className="px-2 py-1 text-white/40 text-xs">
+                            <span className="px-2 py-1 text-[var(--foreground-subtle)] text-xs">
                                 +{issue.labels.length - 4} more
                             </span>
                         )}
@@ -125,7 +125,7 @@ export default function IssueCard({ issue, index }: IssueCardProps) {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleAskAI}
-                    className="flex-shrink-0 px-5 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 rounded-xl text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/25"
+                    className="flex-shrink-0 px-5 py-3 bg-gradient-to-r from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] hover:from-[hsl(191,91%,45%)] hover:to-[hsl(217,91%,65%)] rounded-xl text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[hsl(191,91%,37%,0.25)]"
                 >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
