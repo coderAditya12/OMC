@@ -44,7 +44,13 @@ export default function HomeNavbar({ userImage, userName }: HomeNavbarProps) {
                         href="/home"
                         className="px-4 py-2 text-sm font-medium text-[var(--foreground-muted)] hover:text-white rounded-lg hover:bg-[hsl(0,0%,100%,0.05)] transition-all"
                     >
-                        Issues
+                        Recommended
+                    </Link>
+                    <Link
+                        href="/explore"
+                        className="px-4 py-2 text-sm font-medium text-[var(--foreground-muted)] hover:text-white rounded-lg hover:bg-[hsl(0,0%,100%,0.05)] transition-all"
+                    >
+                        Explore
                     </Link>
                     <Link
                         href="/dashboard"

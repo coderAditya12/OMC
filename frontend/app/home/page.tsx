@@ -30,6 +30,7 @@ interface Issue {
     language: string;
     match_score: number;
     comments: number;
+    repo_stars?: number;
 }
 
 interface ProfileSummary {

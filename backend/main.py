@@ -6,7 +6,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from backend.routers import auth,recommend,chat,chathistory,chatsessions
+from backend.routers import auth,recommend,chat,chathistory,chatsessions,explore
 from backend.services.cache import get_cache_stats, get_redis_client
 from backend.services.cached_issues import check_data_freshness
 from db.database import get_db
@@ -76,14 +76,13 @@ def health(db: Session = Depends(get_db)):
         status["pinecone"] = {"status": "error", "error": str(e)}
     
     return status
-
-
 # Routes
 app.include_router(auth.router)
 app.include_router(recommend.router)
 app.include_router(chat.router)
 app.include_router(chathistory.router)
 app.include_router(chatsessions.router)
+app.include_router(explore.router)
 
 
 if __name__ == "__main__":
