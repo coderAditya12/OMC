@@ -18,3 +18,4 @@ beautifulsoup4
 redis
 google-generativeai
 pinecone
+cohere
