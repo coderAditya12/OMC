@@ -74,20 +74,20 @@ def chunk_text(text: str, chunk_size: int = MAX_CHUNK_SIZE, overlap: int = CHUNK
 
 
 def get_embedding(text: str) -> Optional[List[float]]:
-    """Get embedding using Gemini (free tier)."""
+    """Get embedding using Cohere (free tier - 384 dimensions)."""
     try:
-        from google import genai
-        from utils.config import GEMINI_API_KEY
+        import cohere
+        from utils.config import COHERE_API_KEY
         
-        client = genai.Client(api_key=GEMINI_API_KEY)
+        co = cohere.Client(COHERE_API_KEY)
         
-        result = client.models.embed_content(
-            # model="text-embedding-004",
-            model="gemini-embedding-1.0",
-            contents=text[:8000],  # Limit input
+        response = co.embed(
+            texts=[text[:2000]],  # Limit input
+            model="embed-english-light-v3.0",  # 384 dimensions
+            input_type="search_document"
         )
         
-        return result.embeddings[0].values
+        return response.embeddings[0]
         
     except Exception as e:
         logger.warning(f"  Embedding error: {e}")
