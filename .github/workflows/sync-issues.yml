@@ -31,7 +31,7 @@ jobs:
           INDEX_README: "true"
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX: ${{ secrets.PINECONE_INDEX }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
         run: |
           echo "🚀 Starting issue sync at $(date)"
           python -m backend.services.issue_syncer
