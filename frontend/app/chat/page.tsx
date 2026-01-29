@@ -122,13 +122,14 @@ function ChatContent() {
             const data = await response.json();
 
             if (data.status === "success") {
+                console.log("Loaded chat history, issue_url:", data.issue_url);
                 setSessionId(sessionIdToLoad);
                 setIssueContext({
                     issueTitle: data.issue_title,
                     issueBody: "",
                     issueLabels: [],
                     repoName: data.repo_name,
-                    issueUrl: "",
+                    issueUrl: data.issue_url || "",
                 });
                 const historyMessages = data.messages.map((msg: { role: string; content: string }) => ({
                     role: msg.role as "user" | "assistant",

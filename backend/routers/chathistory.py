@@ -27,5 +27,6 @@ def get_chat_history(session_id:str,db:Session = Depends(get_db)):
         "session_id": session_id,
         "issue_title": session.issue_title,
         "repo_name": session.repo_name,
+        "issue_url": session.issue_url,
         "messages": message_list
     }

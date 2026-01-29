@@ -162,8 +162,8 @@ export default function ExplorePage() {
                             <button
                                 onClick={() => { setSelectedLanguage("all"); setPage(1); }}
                                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedLanguage === "all"
-                                        ? "bg-gradient-to-r from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] text-white shadow-lg shadow-[hsl(191,91%,37%,0.25)]"
-                                        : "bg-[hsl(0,0%,100%,0.05)] text-[var(--foreground-muted)] hover:bg-[hsl(0,0%,100%,0.1)] border border-[var(--border)]"
+                                    ? "bg-gradient-to-r from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] text-white shadow-lg shadow-[hsl(191,91%,37%,0.25)]"
+                                    : "bg-[hsl(0,0%,100%,0.05)] text-[var(--foreground-muted)] hover:bg-[hsl(0,0%,100%,0.1)] border border-[var(--border)]"
                                     }`}
                             >
                                 All Languages
@@ -175,8 +175,8 @@ export default function ExplorePage() {
                                     key={lang.name}
                                     onClick={() => { setSelectedLanguage(lang.name); setPage(1); }}
                                     className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${selectedLanguage === lang.name
-                                            ? "bg-gradient-to-r from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] text-white shadow-lg shadow-[hsl(191,91%,37%,0.25)]"
-                                            : "bg-[hsl(0,0%,100%,0.05)] text-[var(--foreground-muted)] hover:bg-[hsl(0,0%,100%,0.1)] border border-[var(--border)]"
+                                        ? "bg-gradient-to-r from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] text-white shadow-lg shadow-[hsl(191,91%,37%,0.25)]"
+                                        : "bg-[hsl(0,0%,100%,0.05)] text-[var(--foreground-muted)] hover:bg-[hsl(0,0%,100%,0.1)] border border-[var(--border)]"
                                         }`}
                                 >
                                     {lang.name}
@@ -222,10 +222,15 @@ export default function ExplorePage() {
                                             <div className="flex items-start justify-between gap-4">
                                                 {/* Issue Info */}
                                                 <div className="flex-1 min-w-0">
-                                                    {/* Title */}
-                                                    <h3 className="text-white font-medium text-lg group-hover:text-[hsl(191,91%,60%)] transition-colors line-clamp-2">
+                                                    {/* Title - Clickable link to GitHub issue */}
+                                                    <a
+                                                        href={issue.html_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-white font-medium text-lg group-hover:text-[hsl(191,91%,60%)] transition-colors line-clamp-2 hover:underline"
+                                                    >
                                                         {issue.title}
-                                                    </h3>
+                                                    </a>
 
                                                     {/* Repo & Meta */}
                                                     <div className="flex items-center gap-3 mt-2 text-sm text-[var(--foreground-subtle)]">
@@ -260,29 +265,44 @@ export default function ExplorePage() {
                                                     </div>
                                                 </div>
 
-                                                {/* Chat Button */}
-                                                <Link
-                                                    href={`/chat?issue=${encodeURIComponent(JSON.stringify({
-                                                        title: issue.title,
-                                                        body: issue.body,
-                                                        url: issue.html_url,
-                                                        repo: issue.repo_name,
-                                                        labels: issue.labels,
-                                                        language: issue.language
-                                                    }))}`}
-                                                    className="flex-shrink-0"
-                                                >
-                                                    <motion.div
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                        className="px-4 py-2 bg-gradient-to-r from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] text-white text-sm font-medium rounded-xl shadow-lg shadow-[hsl(191,91%,37%,0.25)] flex items-center gap-2"
+                                                {/* Action Buttons */}
+                                                <div className="flex flex-shrink-0 gap-2">
+                                                    {/* View Issue Button */}
+                                                    <a
+                                                        href={issue.html_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-4 py-2 bg-[hsl(0,0%,100%,0.05)] hover:bg-[hsl(0,0%,100%,0.1)] text-[var(--foreground-muted)] hover:text-white text-sm font-medium rounded-xl border border-[var(--border)] flex items-center gap-2 transition-all"
                                                     >
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                                         </svg>
-                                                        Chat
-                                                    </motion.div>
-                                                </Link>
+                                                        View
+                                                    </a>
+
+                                                    {/* Chat Button */}
+                                                    <Link
+                                                        href={`/chat?issue=${encodeURIComponent(JSON.stringify({
+                                                            title: issue.title,
+                                                            body: issue.body,
+                                                            url: issue.html_url,
+                                                            repo: issue.repo_name,
+                                                            labels: issue.labels,
+                                                            language: issue.language
+                                                        }))}`}
+                                                    >
+                                                        <motion.div
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            className="px-4 py-2 bg-gradient-to-r from-[hsl(191,91%,37%)] to-[hsl(217,91%,60%)] text-white text-sm font-medium rounded-xl shadow-lg shadow-[hsl(191,91%,37%,0.25)] flex items-center gap-2"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                            </svg>
+                                                            Chat
+                                                        </motion.div>
+                                                    </Link>
+                                                </div>
                                             </div>
                                         </motion.div>
                                     ))}
@@ -297,8 +317,8 @@ export default function ExplorePage() {
                                             onClick={() => setPage(prev => Math.max(1, prev - 1))}
                                             disabled={page === 1}
                                             className={`px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${page === 1
-                                                    ? 'bg-[hsl(0,0%,100%,0.05)] text-[var(--foreground-subtle)] cursor-not-allowed'
-                                                    : 'bg-[hsl(0,0%,100%,0.1)] text-white hover:bg-[hsl(0,0%,100%,0.15)]'
+                                                ? 'bg-[hsl(0,0%,100%,0.05)] text-[var(--foreground-subtle)] cursor-not-allowed'
+                                                : 'bg-[hsl(0,0%,100%,0.1)] text-white hover:bg-[hsl(0,0%,100%,0.15)]'
                                                 }`}
                                         >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,8 +341,8 @@ export default function ExplorePage() {
                                             onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
                                             disabled={page === totalPages}
                                             className={`px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${page === totalPages
-                                                    ? 'bg-[hsl(0,0%,100%,0.05)] text-[var(--foreground-subtle)] cursor-not-allowed'
-                                                    : 'bg-[hsl(0,0%,100%,0.1)] text-white hover:bg-[hsl(0,0%,100%,0.15)]'
+                                                ? 'bg-[hsl(0,0%,100%,0.05)] text-[var(--foreground-subtle)] cursor-not-allowed'
+                                                : 'bg-[hsl(0,0%,100%,0.1)] text-white hover:bg-[hsl(0,0%,100%,0.15)]'
                                                 }`}
                                         >
                                             Next
