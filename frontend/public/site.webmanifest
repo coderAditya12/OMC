@@ -1,0 +1,21 @@
+{
+  "name": "OpenSource Compass",
+  "short_name": "OSCompass",
+  "description": "AI-powered platform to find your first open source contribution",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0891b2",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
