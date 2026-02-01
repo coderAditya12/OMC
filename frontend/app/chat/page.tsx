@@ -67,11 +67,34 @@ function ChatContent() {
     }, [status, router]);
 
     useEffect(() => {
-        const title = searchParams.get("title") || "Unknown Issue";
-        const body = searchParams.get("body") || "";
-        const labels = searchParams.get("labels")?.split(",") || [];
-        const repo = searchParams.get("repo") || "";
-        const url = searchParams.get("url") || "";
+        // Check for JSON-encoded issue parameter first (from explore page)
+        const issueJson = searchParams.get("issue");
+        let title = "Unknown Issue";
+        let body = "";
+        let labels: string[] = [];
+        let repo = "";
+        let url = "";
+
+        if (issueJson) {
+            try {
+                const issueData = JSON.parse(issueJson);
+                title = issueData.title || "Unknown Issue";
+                body = issueData.body || "";
+                labels = issueData.labels || [];
+                repo = issueData.repo || "";
+                url = issueData.url || "";
+            } catch (e) {
+                console.error("Failed to parse issue JSON:", e);
+            }
+        } else {
+            // Fallback to individual parameters (from IssueCard)
+            title = searchParams.get("title") || "Unknown Issue";
+            body = searchParams.get("body") || "";
+            labels = searchParams.get("labels")?.split(",").filter(Boolean) || [];
+            repo = searchParams.get("repo") || "";
+            url = searchParams.get("url") || "";
+        }
+
         const existingSessionId = searchParams.get("session_id");
 
         clearChat();
