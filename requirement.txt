@@ -19,3 +19,5 @@ redis
 google-generativeai
 pinecone
 cohere
+langchain-openai
+langchain-pinecone

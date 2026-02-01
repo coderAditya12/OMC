@@ -9,11 +9,12 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
-from utils.config import GROQ_API_KEY, GEMINI_API_KEY
+from utils.config import GROQ_API_KEY, GEMINI_API_KEY, OPEN_ROUTER_QWEN_KEY
 from backend.services import tools
 from backend.services.github import get_readme
 from backend.services.pinecone_service import query_similar
 from backend.services.readme_indexer import get_embedding
+from langchain_openai import ChatOpenAI
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
@@ -229,14 +230,18 @@ Labels: {', '.join(issue.get('labels', []))}
 {readme_context}
 """
     
-    # Create LLM with Groq Cloud (fast inference)
-    # Valid Groq models: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite",api_key=GEMINI_API_KEY,temperature=0)
-    # llm = ChatGroq(
-    #     model="llama-3.3-70b-versatile",
-    #     api_key=GROQ_API_KEY,
-    #     temperature=0
-    # )
+    # Use OpenRouter with a free model (DeepSeek)
+    # OpenRouter provides access to many models with a unified API
+    llm = ChatOpenAI(
+        model="deepseek/deepseek-chat",  # Free tier model with good tool support
+        api_key=OPEN_ROUTER_QWEN_KEY,
+        base_url="https://openrouter.ai/api/v1",
+        temperature=0,
+        default_headers={
+            "HTTP-Referer": "https://opensource-compass.vercel.app",
+            "X-Title": "OpenSource Compass"
+        }
+    )
     
     # Bind tools to LLM
     tool_list = tools.get_tools()
