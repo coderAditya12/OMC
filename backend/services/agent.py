@@ -94,6 +94,11 @@ Be warm, encouraging, and approachable. Never be condescending or overwhelming.
 #strict rule
 - don't ask user for using tool. 
 - don't ask evry time user let me fetch file or etc. just use the fetch file tool. 
+- if user ask to read the file content. don't ask for permission just use the fetch_file tool
+- if you need to investigate the multiple files. then do it don't ask which file should you read.
+- for eg:- if 2-3 files are interrelated then read the content of those files and give the user information about those files
+- when user ask for what are the prerequists then List ONLY skills needed for THIS specific issue in each skill in which parts he needs to focus for solving the issue.
+- if possible then try to provide the links as well
 ANTI-HALLUCINATION RULES (MANDATORY):
 - Understand the user query, think twice before moving forward
 - Never guess or fabricate file names, paths, or repository details
@@ -234,16 +239,32 @@ Labels: {', '.join(issue.get('labels', []))}
     
     # Use OpenRouter with a free model (DeepSeek)
     # OpenRouter provides access to many models with a unified API
-    llm = ChatOpenAI(
-        model="deepseek/deepseek-chat",  # Free tier model with good tool support
-        api_key=OPEN_ROUTER_QWEN_KEY,
-        base_url="https://openrouter.ai/api/v1",
-        temperature=0,
-        default_headers={
-            "HTTP-Referer": "https://opensource-compass.vercel.app",
-            "X-Title": "OpenSource Compass"
-        }
-    )
+    # llm = ChatOpenAI(
+    #     model="deepseek/deepseek-chat",  # Free tier model with good tool support
+    #     api_key=OPEN_ROUTER_QWEN_KEY,
+    #     base_url="https://openrouter.ai/api/v1",
+    #     temperature=0,
+    #     default_headers={
+    #         "HTTP-Referer": "https://opensource-compass.vercel.app",
+    #         "X-Title": "OpenSource Compass"
+    #     }
+    # )
+    # llm = ChatOpenAI(
+    #     model="deepseek/deepseek-r1:free",  # Free tier model with good tool support
+    #     api_key=OPEN_ROUTER_QWEN_KEY,
+    #     base_url="https://openrouter.ai/api/v1",
+    #     temperature=0,
+    #     default_headers={
+    #         "HTTP-Referer": "https://opensource-compass.vercel.app",
+    #         "X-Title": "OpenSource Compass"
+    #     }
+    # )
+#     llm = ChatGroq(
+#     model="meta-llama/llama-4-scout-17b-16e-instruct",  # Fast + free
+#     api_key=GROQ_API_KEY,
+#     temperature=0,
+# )
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite",api_key=GEMINI_API_KEY,temperature=0)
     
     # Bind tools to LLM
     tool_list = tools.get_tools()
