@@ -314,6 +314,7 @@ def create_agent(
         Compiled graph and initial state
     """
     # Set tool context
+    
     tools.set_context(access_token, repo_name)
     
     # Get relevant context using RAG (Pinecone)
