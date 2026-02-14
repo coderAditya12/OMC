@@ -337,7 +337,7 @@ Labels: {', '.join(issue.get('labels', []))}
 {readme_context}
 """
     llm = ChatGroq(
-        model="gpt-oss-120b",  # Fast + free
+        model="openai/gpt-oss-120b",  # Fast + free
         api_key=GROQ_API_KEY,
         temperature=0,
     )
