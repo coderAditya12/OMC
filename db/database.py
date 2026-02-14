@@ -2,7 +2,7 @@
 Database session management - FastAPI dependency pattern
 """
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 from utils.config import DB_URL
 
 # Create engine
