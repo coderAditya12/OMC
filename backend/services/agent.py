@@ -336,35 +336,12 @@ Labels: {', '.join(issue.get('labels', []))}
 {issue.get('body', 'No description provided')}
 {readme_context}
 """
-    
-    # Use OpenRouter with a free model (DeepSeek)
-    # OpenRouter provides access to many models with a unified API
-    # llm = ChatOpenAI(
-    #     model="deepseek/deepseek-chat",  # Free tier model with good tool support
-    #     api_key=OPEN_ROUTER_QWEN_KEY,
-    #     base_url="https://openrouter.ai/api/v1",
-    #     temperature=0,
-    #     default_headers={
-    #         "HTTP-Referer": "https://opensource-compass.vercel.app",
-    #         "X-Title": "OpenSource Compass"
-    #     }
-    # )
-    # llm = ChatOpenAI(
-    #     model="deepseek/deepseek-r1:free",  # Free tier model with good tool support
-    #     api_key=OPEN_ROUTER_QWEN_KEY,
-    #     base_url="https://openrouter.ai/api/v1",
-    #     temperature=0,
-    #     default_headers={
-    #         "HTTP-Referer": "https://opensource-compass.vercel.app",
-    #         "X-Title": "OpenSource Compass"
-    #     }
-    # )
-#     llm = ChatGroq(
-#     model="meta-llama/llama-4-scout-17b-16e-instruct",  # Fast + free
-#     api_key=GROQ_API_KEY,
-#     temperature=0,
-# )
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash",api_key=GEMINI_API_KEY,temperature=0)
+    llm = ChatGroq(
+        model="gpt-oss-120b",  # Fast + free
+        api_key=GROQ_API_KEY,
+        temperature=0,
+    )
+    # llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash",api_key=GEMINI_API_KEY,temperature=0)
     
     # Bind tools to LLM
     tool_list = tools.get_tools()
