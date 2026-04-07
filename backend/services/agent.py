@@ -336,12 +336,12 @@ Labels: {', '.join(issue.get('labels', []))}
 {issue.get('body', 'No description provided')}
 {readme_context}
 """
-    llm = ChatGroq(
-        model="openai/gpt-oss-120b",  # Fast + free
-        api_key=GROQ_API_KEY,
-        temperature=0,
-    )
-    # llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash",api_key=GEMINI_API_KEY,temperature=0)
+    # llm = ChatGroq(
+    #     model="openai/gpt-oss-120b",  # Fast + free
+    #     api_key=GROQ_API_KEY,
+    #     temperature=0,
+    # )
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", api_key=GEMINI_API_KEY, temperature=0)
     
     # Bind tools to LLM
     tool_list = tools.get_tools()
