@@ -341,7 +341,7 @@ Labels: {', '.join(issue.get('labels', []))}
     #     api_key=GROQ_API_KEY,
     #     temperature=0,
     # )
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", api_key=GEMINI_API_KEY, temperature=0)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", api_key=GEMINI_API_KEY, temperature=0)
     
     # Bind tools to LLM
     tool_list = tools.get_tools()
