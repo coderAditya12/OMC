@@ -279,9 +279,7 @@ KEEP THE RESPONSE SHORT.
 IMPORTANT FINAL RULE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-DO NOT auto-explain.
-DO NOT assume intent.
-DO NOT enter deep explanation mode unless explicitly requested.
+DON NOT give response in tabular form
 
 """
 def create_agent(
@@ -326,7 +324,7 @@ Labels: {', '.join(issue.get('labels', []))}
 {readme_context}
 """
     llm = ChatOpenAI(
-        model="deepseek-v4-pro", 
+        model="deepseek-v4-flash", 
         api_key=SecretStr(DEEPSEEK_API_KEY), 
         base_url="https://api.deepseek.com",
         temperature=0,
