@@ -1,4 +1,5 @@
 "use client";
+import ReactMarkdown from "react-markdown";
 
 /**
  * Chat Page - AI Assistant Interface
@@ -39,6 +40,7 @@ function ChatContent() {
     const [input, setInput] = useState("");
     const [previousSessions, setPreviousSessions] = useState<ChatSession[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [streamingContent, setStreamingContent] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Zustand store
@@ -179,10 +181,11 @@ function ChatContent() {
         setInput("");
         addMessage({ role: "user", content: userMessage });
         setLoading(true);
+        setStreamingContent("");
 
         try {
             const store = useChatStore.getState();
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/chat/stream`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -199,19 +202,53 @@ function ChatContent() {
                 })
             });
 
-            const data = await response.json();
+            if (!response.ok || !response.body) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
 
-            if (data.status === "success") {
-                setSessionId(data.session_id);
-                addMessage({ role: "assistant", content: data.response });
-                loadPreviousSessions();
-            } else {
-                addMessage({ role: "assistant", content: "Sorry, something went wrong. Please try again." });
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let accumulated = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() ?? "";
+
+                for (const line of lines) {
+                    if (!line.startsWith("data: ")) continue;
+                    const raw = line.slice(6).trim();
+                    if (!raw) continue;
+
+                    try {
+                        const event = JSON.parse(raw);
+                        if (event.type === "token") {
+                            accumulated += event.data;
+                            setStreamingContent(accumulated);
+                        } else if (event.type === "done") {
+                            if (event.session_id) setSessionId(event.session_id);
+                            addMessage({ role: "assistant", content: accumulated });
+                            setStreamingContent(null);
+                            loadPreviousSessions();
+                        } else if (event.type === "error") {
+                            addMessage({ role: "assistant", content: `Error: ${event.data}` });
+                            setStreamingContent(null);
+                        }
+                    } catch {
+                        // ignore malformed SSE lines
+                    }
+                }
             }
         } catch (error) {
             addMessage({ role: "assistant", content: "Failed to connect to server. Please check your connection." });
+            setStreamingContent(null);
         } finally {
             setLoading(false);
+            setStreamingContent(null);
         }
     };
 
@@ -316,37 +353,48 @@ function ChatContent() {
                         <ChatMessage key={i} role={msg.role} content={msg.content} />
                     ))}
 
-                    {/* Loading indicator */}
-                    {isLoading && (
-                        <div className="py-6 bg-white/[0.02]">
+                    {/* Streaming bubble — grows token by token */}
+                    {streamingContent !== null && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="py-6 bg-white/[0.02]"
+                        >
                             <div className="max-w-3xl mx-auto px-4 flex gap-4">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
                                     <span className="text-sm">🧭</span>
                                 </div>
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0 overflow-hidden">
                                     <div className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-2">
                                         Compass AI
                                     </div>
-                                    <div className="flex gap-1.5">
-                                        <motion.div
-                                            animate={{ scale: [1, 1.2, 1] }}
-                                            transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                                            className="w-2 h-2 bg-emerald-400 rounded-full"
-                                        />
-                                        <motion.div
-                                            animate={{ scale: [1, 1.2, 1] }}
-                                            transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                                            className="w-2 h-2 bg-emerald-400 rounded-full"
-                                        />
-                                        <motion.div
-                                            animate={{ scale: [1, 1.2, 1] }}
-                                            transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                                            className="w-2 h-2 bg-emerald-400 rounded-full"
-                                        />
-                                    </div>
+                                    {streamingContent === "" ? (
+                                        <div className="flex gap-1.5">
+                                            <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-2 h-2 bg-emerald-400 rounded-full" />
+                                            <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} className="w-2 h-2 bg-emerald-400 rounded-full" />
+                                            <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} className="w-2 h-2 bg-emerald-400 rounded-full" />
+                                        </div>
+                                    ) : (
+                                        <div className="prose prose-invert prose-sm max-w-none text-white/80">
+                                            <ReactMarkdown
+                                                components={{
+                                                    code: ({ className, children }) => {
+                                                        const isBlock = className?.includes("language-");
+                                                        if (isBlock) return <code className="text-emerald-300 font-mono text-[13px]">{children}</code>;
+                                                        return <code className="bg-white/10 px-1.5 py-0.5 rounded text-blue-300 text-sm font-mono">{children}</code>;
+                                                    },
+                                                    p: ({ children }) => <p className="my-2 leading-relaxed text-white/80">{children}</p>,
+                                                    strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+                                                }}
+                                            >
+                                                {streamingContent}
+                                            </ReactMarkdown>
+                                            <span className="inline-block w-0.5 h-4 bg-emerald-400 animate-pulse ml-0.5 align-middle" />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                     )}
 
                     <div ref={messagesEndRef} />

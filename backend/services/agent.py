@@ -1,6 +1,7 @@
 """
 LangGraph Agent - Agentic AI for helping with open source issues
 """
+from pydantic import SecretStr
 import logging
 from typing import Annotated, TypedDict, List
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
@@ -9,7 +10,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
-from utils.config import GROQ_API_KEY, GEMINI_API_KEY, OPEN_ROUTER_QWEN_KEY
+from utils.config import DEEPSEEK_API_KEY
 from backend.services import tools
 from backend.services.github import get_readme
 from backend.services.pinecone_service import query_similar
@@ -20,6 +21,8 @@ from langchain_openai import ChatOpenAI
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+if not DEEPSEEK_API_KEY:
+    raise ValueError("DEEPSEEK_API_KEY is not set in environment variables. Please set it to use the agent.")
 # Agent State
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
@@ -96,17 +99,6 @@ Be warm, encouraging, and approachable. Never be condescending or overwhelming.
 Your PRIMARY goal is to help users contribute effectively to open source projects
 WITHOUT overwhelming them or assuming intent.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CRITICAL CONTROL RULE (HIGHEST PRIORITY)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Before doing ANY of the following:
-- using tools
-- fetching files
-- explaining repositories
-- explaining issues
-- reading code
-
 You MUST first classify the user's message into EXACTLY ONE category:
 
 1. greeting / small talk  
@@ -161,8 +153,7 @@ STRICT TOOL USAGE RULES
   - OR the logic cannot be understood from a single file
 
 - If a tool call fails:
-  → Retry ONCE
-  → If it still fails, say so honestly and STOP
+  → Retry again
 
 NEVER retry tools or re-explain unless the USER asks again.
 
@@ -177,9 +168,7 @@ ANTI-HALLUCINATION RULES (MANDATORY)
   - issue details
 
 - If you lack information:
-  → Say so clearly
-  → Ask ONE short clarification question
-  → DO NOT fetch files while unclear
+  - you can make tool calls all the available tool calls then you can answer the user questions.
 
 Accuracy is more important than verbosity.
 
@@ -210,7 +199,7 @@ When in this mode, follow these steps EXACTLY:
    - boilerplate
    - unrelated imports
 6. If another file is required:
-   - Fetch ONLY the minimal required section
+   - Fetch the file
    - Repeat the same process
 
 End with:
@@ -299,7 +288,7 @@ def create_agent(
     issue: dict,
     repo_name: str,
     access_token: str,
-    system_prompt: str = None
+    system_prompt: str | None = None
 ):
     """
     Create a LangGraph agent for a specific issue
@@ -336,12 +325,15 @@ Labels: {', '.join(issue.get('labels', []))}
 {issue.get('body', 'No description provided')}
 {readme_context}
 """
-    # llm = ChatGroq(
-    #     model="openai/gpt-oss-120b",  # Fast + free
-    #     api_key=GROQ_API_KEY,
-    #     temperature=0,
-    # )
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", api_key=GEMINI_API_KEY, temperature=0)
+    llm = ChatOpenAI(
+        model="deepseek-v4-pro", 
+        api_key=SecretStr(DEEPSEEK_API_KEY), 
+        base_url="https://api.deepseek.com",
+        temperature=0,
+        extra_body={"thinking": {"type": "disabled"}}
+
+    )
+
     
     # Bind tools to LLM
     tool_list = tools.get_tools()
@@ -391,7 +383,7 @@ def chat(
     agent,
     state: dict,
     user_message: str,
-    chat_history: list = None
+    chat_history: list | None = None
 ) -> tuple[str, list]:
     """
     Send a message to the agent
@@ -459,3 +451,60 @@ def chat(
     
     return response, result["messages"]
 
+
+async def chat_stream(
+    agent,
+    state: dict,
+    user_message: str,
+):
+    """
+    Stream AI response tokens from the LangGraph agent using astream_events.
+
+    Yields string tokens as they are generated.
+    After completion, also updates state["messages"] in place.
+    """
+    from langchain_core.messages import HumanMessage, AIMessage
+
+    # Add user message to state
+    state["messages"].append(HumanMessage(content=user_message))
+
+    full_response = ""
+
+    try:
+        async for event in agent.astream_events(state, version="v2"):
+            kind = event.get("event", "")
+
+            # Only capture tokens from the 'agent' node LLM streaming
+            if kind == "on_chat_model_stream":
+                # Skip if this event comes from a tool node
+                tags = event.get("tags", [])
+                if "tool" in " ".join(tags).lower():
+                    continue
+
+                chunk = event.get("data", {}).get("chunk")
+                if chunk is None:
+                    continue
+
+                # Extract text content from the chunk
+                content = chunk.content if hasattr(chunk, "content") else ""
+                if isinstance(content, list):
+                    for part in content:
+                        if isinstance(part, dict):
+                            text = part.get("text", "")
+                            if text:
+                                full_response += text
+                                yield text
+                        elif isinstance(part, str) and part:
+                            full_response += part
+                            yield part
+                elif isinstance(content, str) and content:
+                    full_response += content
+                    yield content
+
+    except Exception as e:
+        logger.error(f"chat_stream error: {type(e).__name__}: {str(e)}")
+        raise
+
+    # After streaming is done, append the final AI message to state
+    if full_response:
+        state["messages"].append(AIMessage(content=full_response))

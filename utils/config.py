@@ -14,4 +14,5 @@ GITHUB_URL= "https://api.github.com"
 GITHUB_Oauth_token=os.getenv("GITHUB_Oauth_token")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 HF_TOKEN = os.getenv("HF_TOKEN")  # HuggingFace API token (free)
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")  # Cohere API key (free tier)
